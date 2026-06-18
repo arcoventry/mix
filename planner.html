@@ -266,7 +266,17 @@
   .var-legend-dur { font-size: 11px; color: var(--text2); }
   .var-legend-free { font-size: 11px; color: var(--text3); font-style: italic; }
 
-  /* ── OVERFLOW WARNING ── */
+  /* ── OVERFLOW / CARRY-OVER ── */
+  .carry-in-banner {
+    background: #f5a62318; border-left: 3px solid var(--mix-color);
+    padding: 5px 12px; font-size: 11px; color: var(--mix-color);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .flow-warning {
+    margin: 0 12px 8px; background: #f5a62310; border: 1px solid #f5a62355;
+    border-radius: 6px; padding: 6px 10px; display: flex; align-items: center;
+    gap: 6px; font-size: 11px; color: var(--mix-color);
+  }
   .overflow-warning {
     margin: 0 12px 10px;
     background: #e0525218; border: 1px solid #e0525260; border-radius: 6px;
@@ -1213,13 +1223,16 @@ function renderSequence() {
   }
   empty.style.display = 'none';
 
+  const carryData = computeCarryOver();
+
   state.sequence.forEach((item, idx) => {
     const isLast = idx === state.sequence.length - 1;
     const prevItem = idx > 0 ? state.sequence[idx - 1] : null;
     const prevMix = prevItem?.mix?.enabled ?? false;
     const thisMix = item.mix?.enabled && !isLast;
     const postureTotal = seqItemPostureTotal(item);
-    const overflow = postureTotal - item.duration;
+    const { incoming, outgoing, incomingPosture } = carryData[idx];
+    const hasUnabsorbedOverflow = outgoing > 0 && isLast;
     // Each song shows its mixed length when in a mix pair
     const outMixedLen = thisMix ? (item.mix.outMixedLength ?? item.duration) : item.duration;
     const inMixedLen  = prevMix ? (prevItem.mix.inMixedLength ?? item.duration) : item.duration;
@@ -1231,7 +1244,7 @@ function renderSequence() {
     wrapper.dataset.seqId = item.id;
 
     const card = document.createElement('div');
-    card.className = 'song-card' + (overflow > 0 ? ' overflow' : '');
+    card.className = 'song-card' + (hasUnabsorbedOverflow ? ' overflow' : '');
     card.dataset.seqId = item.id;
     card.setAttribute('draggable', 'true');
     card.addEventListener('dragstart', e => onSongCardDragStart(e, item.id));
@@ -1290,19 +1303,28 @@ function renderSequence() {
           ` : ''}
         ` : ''}
       </div>
+      ${incoming > 0 ? `
+        <div class="carry-in-banner">
+          ← ${fmtTime(incoming)} of ${incomingPosture ? esc(incomingPosture.name) : 'previous posture'} carries in from the last song
+        </div>
+      ` : ''}
       <div class="song-postures-area" id="pa-${item.id}">
-        ${item.postures.length === 0
+        ${item.postures.length === 0 && incoming === 0
           ? `<div class="posture-drop-zone" id="pdz-${item.id}">Drop postures here</div>`
-          : buildPostureRows(item)
+          : item.postures.length === 0 && incoming > 0
+            ? `<div class="posture-drop-zone" id="pdz-${item.id}" style="margin-top:6px">Drop additional postures here</div>`
+            : buildPostureRows(item)
         }
       </div>
-      ${overflow > 0 ? `
+      ${outgoing > 0 && !isLast ? `
+        <div class="flow-warning">→ ${fmtTime(outgoing)} flows into the next song</div>
+      ` : ''}
+      ${hasUnabsorbedOverflow ? `
         <div class="overflow-warning">
           <div class="overflow-warning-icon">⚠️</div>
           <div class="overflow-warning-text">
-            <strong>Postures overflow by ${fmtTime(overflow)}</strong><br>
-            Total postures: ${fmtTime(postureTotal)} · Song: ${fmtTime(item.duration)}.
-            Add another song or remove a posture.
+            <strong>${fmtTime(outgoing)} of posture time has no song to play over</strong><br>
+            Add another song to the plan to cover the remaining posture time.
           </div>
           <button class="btn success xs" onclick="openAddToSequenceModal()">+ Song</button>
         </div>
@@ -1490,6 +1512,24 @@ function updateStats() {
   document.getElementById('stat-eff').textContent = fmtTime(effective);
 }
 
+// ── CARRY-OVER ─────────────────────────────────────────────────────
+function computeCarryOver() {
+  let carry = 0, carryPosture = null;
+  return state.sequence.map(item => {
+    const incoming = carry;
+    const incomingPosture = carryPosture;
+    const thisTotal = seqItemPostureTotal(item);
+    const outgoing = Math.max(0, incoming + thisTotal - item.duration);
+    if (outgoing > 0 && item.postures.length > 0) {
+      carryPosture = getPosture(item.postures[item.postures.length - 1].postureId) || carryPosture;
+    } else if (outgoing === 0) {
+      carryPosture = null;
+    }
+    carry = outgoing;
+    return { incoming, outgoing, incomingPosture };
+  });
+}
+
 // ── TIMELINE ───────────────────────────────────────────────────────
 function renderTimeline() {
   const track = document.getElementById('timeline-track');
@@ -1507,6 +1547,7 @@ function renderTimeline() {
     labels.innerHTML = ''; legend.innerHTML = ''; return;
   }
 
+  const tlCarry = computeCarryOver();
   let segs = '', labelData = [], acc = 0;
   state.sequence.forEach((item, idx) => {
     const isLast = idx === state.sequence.length - 1;
@@ -1520,7 +1561,16 @@ function renderTimeline() {
 
     // Build posture/variation sub-segments proportional to effective song duration
     const postureTotal = seqItemPostureTotal(item);
+    const { incoming: tlIncoming, incomingPosture: tlIncomingPosture } = tlCarry[idx];
     let subHTML = '';
+    // Carry-in from previous song's overflow
+    if (tlIncoming > 0 && tlIncomingPosture) {
+      const cFlex = Math.min(1, tlIncoming / disp).toFixed(4);
+      subHTML += `<div style="flex:${cFlex};background:${tlIncomingPosture.color}99;height:100%;border-right:1px dashed #ffffff44" title="← ${fmtTime(tlIncoming)} carried from previous song (${esc(tlIncomingPosture.name)})"></div>`;
+    } else if (tlIncoming > 0) {
+      const cFlex = Math.min(1, tlIncoming / disp).toFixed(4);
+      subHTML += `<div style="flex:${cFlex};background:#f5a62355;height:100%;border-right:1px dashed #ffffff44"></div>`;
+    }
     item.postures.forEach(entry => {
       const p = getPosture(entry.postureId);
       if (!p || !p.duration) return;
@@ -1539,7 +1589,7 @@ function renderTimeline() {
         subHTML += `<div style="flex:${pFlex};background:${p.color}cc;height:100%"></div>`;
       }
     });
-    const freeSong = Math.max(0, disp - Math.min(postureTotal, disp));
+    const freeSong = Math.max(0, disp - Math.min(postureTotal + tlIncoming, disp));
     if (freeSong > 0)
       subHTML += `<div style="flex:${(freeSong/disp).toFixed(4)};background:#2e3348;height:100%"></div>`;
     if (!subHTML) subHTML = `<div style="flex:1;background:#2e3348;height:100%"></div>`;
@@ -1655,20 +1705,17 @@ function dropPostureOnSong(seqId, postureId) {
   const posture = getPosture(postureId);
   if (!item || !posture) return;
 
-  // Check overflow before adding
-  const currentTotal = seqItemPostureTotal(item);
-  if (currentTotal >= item.duration) {
-    toast(`"${item.title}" is full (${fmtTime(currentTotal)} / ${fmtTime(item.duration)}). Add another song first.`);
-    return;
-  }
-
   item.postures.push({ id: uid(), postureId, notes: '' });
   save(); renderSequence();
 
-  // Check overflow after adding and warn
-  const newTotal = seqItemPostureTotal(item);
-  if (newTotal > item.duration) {
-    toast(`⚠️ Postures now exceed "${item.title}" by ${fmtTime(newTotal - item.duration)}`);
+  const carry = computeCarryOver();
+  const idx = state.sequence.findIndex(s => s.id === seqId);
+  const { outgoing } = carry[idx];
+  const isLast = idx === state.sequence.length - 1;
+  if (outgoing > 0 && isLast) {
+    toast(`⚠️ ${posture.name} added — ${fmtTime(outgoing)} exceeds available songs. Add another song.`);
+  } else if (outgoing > 0) {
+    toast(`${posture.name} added — ${fmtTime(outgoing)} flows into the next song`);
   } else {
     toast(`${posture.name} added to "${item.title}"`);
   }
