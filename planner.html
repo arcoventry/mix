@@ -1441,9 +1441,10 @@ function toggleMix(seqId) {
   item.mix.enabled = !item.mix.enabled;
   if (item.mix.enabled) {
     const nextItem = state.sequence[idx + 1];
-    // Default mixed lengths to full duration so user edits down
-    if (item.mix.outMixedLength == null) item.mix.outMixedLength = item.duration;
-    if (item.mix.inMixedLength == null && nextItem) item.mix.inMixedLength = nextItem.duration;
+    if (item.mix.outMixedLength == null || item.mix.outMixedLength > item.duration)
+      item.mix.outMixedLength = item.duration;
+    if (nextItem && (item.mix.inMixedLength == null || item.mix.inMixedLength > nextItem.duration))
+      item.mix.inMixedLength = nextItem.duration;
   }
   save(); renderSequence();
 }
@@ -1473,6 +1474,12 @@ function updateInMixedLength(prevSeqId, incomingSeqId, val) {
 function validateMixes() {
   const last = state.sequence[state.sequence.length-1];
   if (last?.mix?.enabled) last.mix.enabled = false;
+  state.sequence.forEach((item, i) => {
+    if (!item.mix?.enabled) return;
+    const next = state.sequence[i + 1];
+    if (item.mix.outMixedLength > item.duration) item.mix.outMixedLength = item.duration;
+    if (next && item.mix.inMixedLength > next.duration) item.mix.inMixedLength = next.duration;
+  });
 }
 
 // ── STATS ──────────────────────────────────────────────────────────
