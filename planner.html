@@ -319,26 +319,57 @@
     font-size: 11px; font-weight: 700; color: var(--text3);
     text-transform: uppercase; letter-spacing: .8px;
   }
-  .timeline-track { height: 36px; background: var(--bg3); border-radius: 8px; overflow: hidden; display: flex; }
-  .timeline-seg {
-    height: 100%; position: relative; display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 700; color: #fff; overflow: hidden; text-shadow: 0 1px 2px #0006;
-    cursor: default;
+  /* ── TIMELINE (two-layer) ── */
+  .timeline-track {
+    height: 58px; background: var(--bg3); border-radius: 10px;
+    overflow: hidden; position: relative;
   }
-  .timeline-seg:not(:last-child)::after {
-    content: ''; position: absolute; right: 0; top: 0; bottom: 0;
-    width: 1px; background: #ffffff22;
+  /* Layer 1 — song backgrounds */
+  .tl-song-layer { position: absolute; inset: 0; display: flex; }
+  .tl-song-seg {
+    height: 100%; position: relative; overflow: hidden;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 0 7px 4px; cursor: default;
   }
-  .timeline-mix-overlay {
-    position: absolute; top: 0; bottom: 0; right: 0;
-    background: repeating-linear-gradient(45deg, transparent, transparent 3px, #ffffff22 3px, #ffffff22 6px);
+  .tl-song-seg:nth-child(odd)  { background: #181c2e; }
+  .tl-song-seg:nth-child(even) { background: #1d2138; }
+  .tl-song-seg:not(:last-child) { border-right: 1px solid rgba(255,255,255,0.06); }
+  .tl-song-num {
+    font-size: 8px; font-weight: 800; color: rgba(255,255,255,0.2);
+    letter-spacing: 0.3px; line-height: 1; margin-bottom: 2px;
+  }
+  .tl-song-label {
+    font-size: 9px; font-weight: 600; color: var(--text3);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 100%; line-height: 1;
+  }
+  .tl-mix-hatch {
+    position: absolute; top: 0; bottom: 18px; right: 0;
+    background: repeating-linear-gradient(135deg, transparent, transparent 3px, rgba(255,255,255,0.06) 3px, rgba(255,255,255,0.06) 6px);
     pointer-events: none;
+  }
+  /* Layer 2 — posture bars */
+  .tl-posture-layer { position: absolute; left: 0; right: 0; top: 5px; height: 36px; overflow: hidden; }
+  .tl-posture-bar {
+    position: absolute; height: 100%; display: flex;
+    border-radius: 5px; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.14);
+    cursor: default; transition: box-shadow .15s;
+  }
+  .tl-posture-bar:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.2); }
+  .tl-posture-var { height: 100%; }
+  .tl-posture-var:not(:last-child) { border-right: 1px solid rgba(0,0,0,0.18); }
+  /* Song boundary tick lines */
+  .tl-boundary {
+    position: absolute; top: 0; bottom: 18px;
+    width: 1px; background: rgba(255,255,255,0.13); pointer-events: none;
   }
   .timeline-labels { position: relative; height: 14px; margin-top: 4px; font-size: 10px; color: var(--text3); }
   .timeline-label { position: absolute; transform: translateX(-50%); white-space: nowrap; }
   .timeline-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
-  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); cursor: default; }
+  .legend-swatch { display: flex; height: 10px; border-radius: 3px; overflow: hidden; gap: 1px; }
+  .legend-swatch-seg { width: 10px; }
 
   /* ── MODALS ── */
   .modal-overlay {
@@ -1551,79 +1582,106 @@ function renderTimeline() {
     : '';
 
   if (!state.sequence.length || !total) {
-    track.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:11px">Add songs to see timeline</div>';
+    track.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:11px">Add songs to see timeline</div>';
     labels.innerHTML = ''; legend.innerHTML = ''; return;
   }
 
-  const tlCarry = computeCarryOver();
-  let segs = '', labelData = [], acc = 0;
-  state.sequence.forEach((item, idx) => {
+  // ── Song positions in effective class time ──────────────────────
+  let songCursor = 0;
+  const songPos = state.sequence.map((item, idx) => {
     const isLast = idx === state.sequence.length - 1;
     const prevItem = idx > 0 ? state.sequence[idx - 1] : null;
     const thisMix = item.mix?.enabled && !isLast;
     const prevMix = prevItem?.mix?.enabled ?? false;
     const outSaved = thisMix ? Math.max(0, item.duration - (item.mix.outMixedLength ?? item.duration)) : 0;
     const inSaved  = prevMix ? Math.max(0, item.duration - (prevItem.mix.inMixedLength ?? item.duration)) : 0;
-    const disp = Math.max(1, item.duration - outSaved - inSaved);
-    const pct = (disp / effective) * 100;
+    const effDur = Math.max(1, item.duration - outSaved - inSaved);
+    const start = songCursor;
+    songCursor += effDur;
+    return { item, start, effDur, thisMix, outSaved };
+  });
 
-    // Build posture/variation sub-segments proportional to effective song duration
-    const postureTotal = seqItemPostureTotal(item);
-    const { incoming: tlIncoming, incomingPosture: tlIncomingPosture } = tlCarry[idx];
-    let subHTML = '';
-    // Carry-in from previous song's overflow
-    if (tlIncoming > 0 && tlIncomingPosture) {
-      const cFlex = Math.min(1, tlIncoming / disp).toFixed(4);
-      subHTML += `<div style="flex:${cFlex};background:${tlIncomingPosture.color}99;height:100%;border-right:1px dashed #ffffff44" title="← ${fmtTime(tlIncoming)} carried from previous song (${esc(tlIncomingPosture.name)})"></div>`;
-    } else if (tlIncoming > 0) {
-      const cFlex = Math.min(1, tlIncoming / disp).toFixed(4);
-      subHTML += `<div style="flex:${cFlex};background:#f5a62355;height:100%;border-right:1px dashed #ffffff44"></div>`;
-    }
+  // ── Posture events in global class time ─────────────────────────
+  // Postures play back-to-back; overflow crosses song boundaries naturally
+  let globalCursor = 0;
+  const postureEvents = [];
+  songPos.forEach(({ item, start, effDur }) => {
+    let posCursor = Math.max(start, globalCursor);
     item.postures.forEach(entry => {
       const p = getPosture(entry.postureId);
       if (!p || !p.duration) return;
-      const pFlex = (p.duration / disp).toFixed(4);
-      if (p.variations?.length) {
-        const varSum = p.variations.reduce((s, v) => s + (v.duration || 0), 0);
-        let inner = '';
-        p.variations.forEach((v, vi) => {
-          if (!v.duration) return;
-          inner += `<div style="flex:${(v.duration/p.duration).toFixed(4)};background:${varColor(p.color,vi)}"></div>`;
-        });
-        const free = p.duration - varSum;
-        if (free > 0) inner += `<div style="flex:${(free/p.duration).toFixed(4)};background:${p.color}55"></div>`;
-        subHTML += `<div style="flex:${pFlex};display:flex;height:100%;min-width:0;overflow:hidden">${inner}</div>`;
-      } else {
-        subHTML += `<div style="flex:${pFlex};background:${p.color}cc;height:100%"></div>`;
-      }
+      postureEvents.push({ startSec: posCursor, dur: p.duration, p });
+      posCursor += p.duration;
     });
-    const freeSong = Math.max(0, disp - Math.min(postureTotal + tlIncoming, disp));
-    if (freeSong > 0)
-      subHTML += `<div style="flex:${(freeSong/disp).toFixed(4)};background:#2e3348;height:100%"></div>`;
-    if (!subHTML) subHTML = `<div style="flex:1;background:#2e3348;height:100%"></div>`;
-
-    const lbl = item.title.length > 12 ? item.title.slice(0,11)+'…' : item.title;
-    segs += `<div class="timeline-seg" style="flex:${pct.toFixed(3)}" title="${esc(item.title)} — ${fmtTime(disp)}">
-      <div style="position:absolute;inset:0;display:flex;overflow:hidden">${subHTML}</div>
-      ${pct > 5 ? `<span style="position:relative;z-index:1">${lbl}</span>` : ''}
-      ${thisMix ? `<div class="timeline-mix-overlay" style="width:${Math.min(50,(outSaved/Math.max(1,item.duration))*100).toFixed(1)}%"></div>` : ''}
-    </div>`;
-    labelData.push({ pct: (acc/effective)*100, time: acc });
-    acc += disp;
+    globalCursor = posCursor;
   });
-  labelData.push({ pct: 100, time: acc });
 
-  track.innerHTML = segs;
+  // ── Layer 1: song background segments ───────────────────────────
+  const songLayerHTML = songPos.map(({ item, effDur, thisMix, outSaved }, i) => {
+    const flex = (effDur / effective * 100).toFixed(3);
+    const lbl = item.title.length > 16 ? item.title.slice(0, 15) + '…' : item.title;
+    const hatch = thisMix
+      ? `<div class="tl-mix-hatch" style="width:${Math.min(50, (outSaved / Math.max(1, item.duration)) * 100).toFixed(1)}%"></div>`
+      : '';
+    return `<div class="tl-song-seg" style="flex:${flex}" title="${esc(item.title)} — ${fmtTime(effDur)}">
+      ${hatch}
+      <div class="tl-song-num">${i + 1}</div>
+      <div class="tl-song-label">${flex > 6 ? esc(lbl) : ''}</div>
+    </div>`;
+  }).join('');
+
+  // ── Layer 2: posture bars (absolute, span song boundaries) ───────
+  const postureLayerHTML = postureEvents.map(({ startSec, dur, p }) => {
+    const left  = (startSec / effective * 100).toFixed(3);
+    const width = (dur / effective * 100).toFixed(3);
+    let inner = '';
+    if (p.variations?.length) {
+      const varSum = p.variations.reduce((s, v) => s + (v.duration || 0), 0);
+      p.variations.forEach((v, vi) => {
+        if (!v.duration) return;
+        inner += `<div class="tl-posture-var" style="flex:${(v.duration / p.duration).toFixed(4)};background:${varColor(p.color, vi)}" title="${esc(v.name)}: ${fmtTime(v.duration)}"></div>`;
+      });
+      const free = p.duration - varSum;
+      if (free > 0) inner += `<div class="tl-posture-var" style="flex:${(free / p.duration).toFixed(4)};background:${p.color}55"></div>`;
+    } else {
+      inner = `<div class="tl-posture-var" style="flex:1;background:${p.color}dd"></div>`;
+    }
+    return `<div class="tl-posture-bar" style="left:${left}%;width:calc(${width}% - 2px)" title="${esc(p.name)} — ${fmtTime(dur)}">${inner}</div>`;
+  }).join('');
+
+  // ── Song boundary lines ──────────────────────────────────────────
+  const boundaryHTML = songPos.slice(0, -1).map(({ start, effDur }) =>
+    `<div class="tl-boundary" style="left:${((start + effDur) / effective * 100).toFixed(2)}%"></div>`
+  ).join('');
+
+  track.innerHTML = `
+    <div class="tl-song-layer">${songLayerHTML}</div>
+    <div class="tl-posture-layer">${postureLayerHTML}</div>
+    ${boundaryHTML}
+  `;
+
+  // ── Time labels ─────────────────────────────────────────────────
+  const labelData = songPos.map(({ start }) => ({ pct: start / effective * 100, time: start }));
+  const last = songPos[songPos.length - 1];
+  labelData.push({ pct: 100, time: last.start + last.effDur });
   labels.innerHTML = labelData.map(l =>
     `<div class="timeline-label" style="left:${l.pct.toFixed(1)}%">${fmtTime(l.time)}</div>`
   ).join('');
 
-  // Legend: unique postures used
-  const usedIds = new Set(state.sequence.flatMap(s => s.postures.map(e => e.postureId)));
-  legend.innerHTML = usedIds.size > 0
-    ? Array.from(usedIds).map(pid => {
+  // ── Legend: each posture with variation color swatches ──────────
+  const usedIds = [...new Set(state.sequence.flatMap(s => s.postures.map(e => e.postureId)))];
+  legend.innerHTML = usedIds.length > 0
+    ? usedIds.map(pid => {
         const p = getPosture(pid);
-        return p ? `<div class="legend-item"><div class="legend-dot" style="background:${p.color}"></div>${esc(p.name)}</div>` : '';
+        if (!p) return '';
+        const swatchSegs = p.variations?.length
+          ? p.variations.map((v, vi) => v.duration
+              ? `<div class="legend-swatch-seg" style="background:${varColor(p.color, vi)}"></div>` : '').join('')
+          : `<div class="legend-swatch-seg" style="background:${p.color}"></div>`;
+        return `<div class="legend-item" title="${esc(p.name)} — ${fmtTime(p.duration)}">
+          <div class="legend-swatch">${swatchSegs}</div>
+          ${esc(p.name)}
+        </div>`;
       }).join('')
     : '<div style="font-size:11px;color:var(--text3)">Assign postures to songs to see legend</div>';
 }
