@@ -4,6 +4,41 @@ All notable changes to the Song ↔ Exercise Sequence Planner are documented her
 
 ---
 
+## [2.1.0] — 2026-06-18
+
+### Overview
+A full visual refresh. The app moves from a dark navy/blue developer theme to a clean light "Daylight" palette designed as one matched set, and the variation color system was reworked so its divisions stay crisp on any palette. Existing plans load unchanged.
+
+---
+
+### Changes
+
+#### New "Daylight" Light Theme
+- Replaced the dark navy-black chrome with a warm light/paper theme — off-white background, white panels, dark warm text
+- Refit every dark-theme-only treatment for light backgrounds: timeline segment fills, song-number labels, mix hatches, the variation-chip badges, drag-over highlights, and the color-picker selection ring
+
+#### Palette-Matched Accent
+- The accent is now the **steel-blue** (`#7e95c4`) pulled directly from the posture color set, so the app chrome belongs to the same family as the posture bars instead of clashing with them
+- (Previously a generic indigo that read as a default/template color)
+
+#### Harmonized, Hex-Ordered Posture Colors
+- The 15 posture swatches are a cohesive soft-pastel set, and are now ordered by hex value so the color picker reads as a smooth gradient rather than a random scatter
+
+---
+
+### Fixes
+
+#### Variation Divisions Invisible on the Light Palette
+- After the palette change, the proportional variation bars stopped showing their internal divisions — adjacent variation tints were washing into one another
+- Root cause: variation tints were derived by *only lightening the base color toward white*. That stepped cleanly on dark saturated colors, but on light pastels every tint collapsed toward near-white
+- Reworked the tint generator to step through evenly-spaced **HSL lightness bands** on the base hue, so divisions stay distinct for any base color — light or dark. Added a hairline divider between segments on the card bars, and fixed a library variation-chip tint that was emitting invalid CSS
+- Now correct everywhere variations are drawn: posture cards, legend dots, per-card song-time bars, the bottom timeline, the modal editor, and the timeline legend
+
+#### Timeline Boundary Lines Floated as Partial-Height Streaks
+- Song-boundary tick lines stopped short of the bottom of the timeline track, leaving dark vertical streaks hovering in the upper portion — especially visible on the light theme. They now run full-height as single clean, subtle dividers
+
+---
+
 ## [2.0.1] — 2026-06-18
 
 ### Overview
