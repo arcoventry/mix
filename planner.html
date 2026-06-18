@@ -1837,25 +1837,7 @@ function seedDefaults() {
   if (!state.variationTypes.length) {
     state.variationTypes = ['Hold', 'Pulse', 'Large ROM', 'Tempo', 'Flow', 'Isometric'];
   }
-  if (!state.postures.length) {
-    const defaults = [
-      { name: 'Warm-Up',       duration: 180, color: COLORS[1],
-        variations: [{id:uid(),name:'Hold',duration:60},{id:uid(),name:'Pulse',duration:60},{id:uid(),name:'Large ROM',duration:60}] },
-      { name: 'Seated Climb',  duration: 150, color: COLORS[0],
-        variations: [{id:uid(),name:'Hold',duration:90},{id:uid(),name:'Pulse',duration:60}] },
-      { name: 'Standing Climb',duration: 120, color: COLORS[4],
-        variations: [{id:uid(),name:'Large ROM',duration:60},{id:uid(),name:'Hold',duration:60}] },
-      { name: 'Threshold Push',duration: 240, color: COLORS[2],
-        variations: [{id:uid(),name:'Pulse',duration:120},{id:uid(),name:'Hold',duration:120}] },
-      { name: 'Sprint',        duration: 90,  color: COLORS[3],
-        variations: [{id:uid(),name:'Pulse',duration:45},{id:uid(),name:'Large ROM',duration:45}] },
-      { name: 'Recovery',      duration: 180, color: COLORS[5],
-        variations: [{id:uid(),name:'Hold',duration:180}] },
-      { name: 'Cool-Down',     duration: 230, color: COLORS[6],
-        variations: [{id:uid(),name:'Hold',duration:120},{id:uid(),name:'Large ROM',duration:60}] },
-    ];
-    defaults.forEach(d => state.postures.push({ id: uid(), ...d }));
-  }
+
   save();
 }
 
