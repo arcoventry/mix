@@ -1856,17 +1856,6 @@ function seedDefaults() {
     ];
     defaults.forEach(d => state.postures.push({ id: uid(), ...d }));
   }
-  if (!state.songHistory.length) {
-    [
-      { title:'Higher Ground',  artist:'Solar Fields', duration:200 },
-      { title:'Long Climb',     artist:'Echo Valley',  duration:310 },
-      { title:'Push The Pace',  artist:'Riftline',     duration:245 },
-      { title:'Steady Burn',    artist:'Nightcoast',   duration:225 },
-      { title:'Sprint Theory',  artist:'Voltage Park', duration:160 },
-      { title:'Even Keel',      artist:'Even Keel',    duration:270 },
-      { title:'Wind Down',      artist:'Wind Down',    duration:230 },
-    ].forEach(s => state.songHistory.push({ id: uid(), ...s }));
-  }
   save();
 }
 
