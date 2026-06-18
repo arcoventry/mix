@@ -321,18 +321,18 @@
     border-radius: 6px; padding: 6px 8px;
   }
   .var-editor-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
-  .var-editor-name {
-    flex: 1; background: var(--bg); border: 1px solid var(--border);
+  .var-editor-row .var-editor-name {
+    flex: 1; width: auto; background: var(--bg); border: 1px solid var(--border);
     border-radius: 5px; color: var(--text); font-size: 13px; font-weight: 600;
     padding: 3px 7px; min-width: 0;
   }
-  .var-editor-name:focus { outline: none; border-color: var(--accent); }
-  .var-editor-dur {
+  .var-editor-row .var-editor-name:focus { outline: none; border-color: var(--accent); }
+  .var-editor-row .var-editor-dur {
     width: 64px; background: var(--bg); border: 1px solid var(--border);
     border-radius: 5px; color: var(--text); font-size: 12px; padding: 3px 6px;
     text-align: center; flex-shrink: 0;
   }
-  .var-editor-dur:focus { outline: none; border-color: var(--accent); }
+  .var-editor-row .var-editor-dur:focus { outline: none; border-color: var(--accent); }
 
   /* ── VARIATION TOTAL BAR ── */
   .var-total-bar-wrap { margin-top: 6px; }
