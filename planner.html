@@ -1603,48 +1603,46 @@ function computeCarryOver() {
 }
 
 // ── AUTO-REORDER ───────────────────────────────────────────────────
-// Reassign each posture to the song whose effective time-window its start
-// falls in. A posture keeps its home song as long as it STARTS there (even if
-// it overflows the boundary), but a posture dropped into an already-full song
-// is bumped down to the next song that has room. Returns true if anything moved.
+// Treat all postures as one continuous routine over the playlist. Flatten them
+// into order, then re-flow into song buckets by effective time windows.
+// Reordering songs always recalculates cleanly — posture ORDER is the ground
+// truth, song-assignment is always derived. Returns true if anything moved.
 function redistributePostures() {
   if (!state.sequence.length) return false;
 
-  // Effective song windows — independent of posture assignment
-  let cursor0 = 0;
-  const windows = state.sequence.map((item, idx) => {
+  // Compute effective song windows
+  let c = 0;
+  const win = state.sequence.map((it, idx) => {
     const isLast = idx === state.sequence.length - 1;
     const prevItem = idx > 0 ? state.sequence[idx - 1] : null;
-    const thisMix = item.mix?.enabled && !isLast;
+    const thisMix = it.mix?.enabled && !isLast;
     const prevMix = prevItem?.mix?.enabled ?? false;
-    const outSaved = thisMix ? Math.max(0, item.duration - (item.mix.outMixedLength ?? item.duration)) : 0;
-    const inSaved  = prevMix ? Math.max(0, item.duration - (prevItem.mix.inMixedLength ?? item.duration)) : 0;
-    const effDur = Math.max(1, item.duration - outSaved - inSaved);
-    const start = cursor0; cursor0 += effDur;
-    return { start, end: cursor0 };
+    const outSaved = thisMix ? Math.max(0, it.duration - (it.mix.outMixedLength ?? it.duration)) : 0;
+    const inSaved  = prevMix ? Math.max(0, it.duration - (prevItem.mix.inMixedLength ?? it.duration)) : 0;
+    const effDur = Math.max(1, it.duration - outSaved - inSaved);
+    const start = c; c += effDur;
+    return { start, end: c };
   });
 
-  // Walk postures in class order, greedily assigning to the song they start in.
-  // One-directional: a posture is only ever bumped DOWN into a later song when
-  // it would start past its current song's end. It's never pulled up into an
-  // earlier song, so an intentional drop into a later song is respected.
+  // Flatten ALL postures across ALL songs in their current order
+  const flat = [];
+  state.sequence.forEach(it => it.postures.forEach(e => flat.push(e)));
+
+  // Re-flow flat list into song buckets by window
   const buckets = state.sequence.map(() => []);
-  let cursor = 0, si = 0, changed = false;
-  state.sequence.forEach((item, fromSong) => {
-    item.postures.forEach(entry => {
-      const p = getPosture(entry.postureId);
-      const dur = p?.duration || 0;
-      while (si < windows.length - 1 && cursor >= windows[si].end) si++;
-      const target = Math.max(si, fromSong); // never pull a posture earlier than its home
-      cursor = Math.max(cursor, windows[target].start);
-      buckets[target].push(entry);
-      if (target !== fromSong) changed = true;
-      cursor += dur;
-      si = target;
-    });
+  let cur = 0, si = 0;
+  flat.forEach(e => {
+    const p = getPosture(e.postureId); const dur = p?.duration || 0;
+    while (si < win.length - 1 && cur >= win[si].end) si++;
+    buckets[si].push(e); cur += dur;
   });
 
-  if (changed) state.sequence.forEach((item, si) => { item.postures = buckets[si]; });
+  // Detect change and apply
+  let changed = false;
+  state.sequence.forEach((it, i) => {
+    if (it.postures.map(e => e.id).join() !== buckets[i].map(e => e.id).join()) changed = true;
+    it.postures = buckets[i];
+  });
   return changed;
 }
 
