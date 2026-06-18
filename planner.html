@@ -319,7 +319,15 @@
     display: flex; align-items: center; gap: 7px;
     background: var(--bg3); border: 1px solid var(--border);
     border-radius: 6px; padding: 6px 8px;
+    cursor: default;
   }
+  .var-editor-row.drag-over { border-color: var(--accent); background: #1e2438; }
+  .var-editor-row.dragging { opacity: 0.4; }
+  .var-drag-handle {
+    color: var(--text3); font-size: 14px; cursor: grab; flex-shrink: 0;
+    user-select: none; padding: 0 2px; line-height: 1;
+  }
+  .var-drag-handle:active { cursor: grabbing; }
   .var-editor-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
   .var-editor-row .var-editor-name {
     flex: 1; width: auto; background: var(--bg); border: 1px solid var(--border);
@@ -766,12 +774,16 @@ function renderVarRows() {
   }
   emptyEl.style.display = 'none';
 
+  let dragSrcId = null;
+
   pmVariations.forEach((v, idx) => {
     const row = document.createElement('div');
     row.className = 'var-editor-row';
     row.dataset.vid = v.id;
+    row.draggable = true;
     const color = varColor(pmSelectedColor, idx);
     row.innerHTML = `
+      <div class="var-drag-handle" title="Drag to reorder">⠿</div>
       <div class="var-editor-swatch" style="background:${color}"></div>
       <input class="var-editor-name" type="text" value="${esc(v.name)}" placeholder="Name"
              oninput="updateVarName('${v.id}',this.value)">
@@ -779,6 +791,34 @@ function renderVarRows() {
              oninput="updateVarDur('${v.id}',this.value)">
       <button class="btn icon xs" onclick="removeVariationRow('${v.id}')">✕</button>
     `;
+
+    row.addEventListener('dragstart', e => {
+      dragSrcId = v.id;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      container.querySelectorAll('.var-editor-row').forEach(r => r.classList.remove('drag-over'));
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      container.querySelectorAll('.var-editor-row').forEach(r => r.classList.remove('drag-over'));
+      if (v.id !== dragSrcId) row.classList.add('drag-over');
+    });
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      if (!dragSrcId || dragSrcId === v.id) return;
+      const fromIdx = pmVariations.findIndex(x => x.id === dragSrcId);
+      const toIdx   = pmVariations.findIndex(x => x.id === v.id);
+      const [moved] = pmVariations.splice(fromIdx, 1);
+      pmVariations.splice(toIdx, 0, moved);
+      dragSrcId = null;
+      renderVarRows();
+      updateVarBar();
+    });
+
     container.appendChild(row);
   });
 
