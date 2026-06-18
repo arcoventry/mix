@@ -156,11 +156,10 @@
     cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text3);
     transition: all .15s; user-select: none;
   }
+  .mix-toggle:hover { border-color: var(--mix-color); color: var(--mix-color); }
   .mix-toggle.active { background: #f5a62322; border-color: var(--mix-color); color: var(--mix-color); }
-  .mix-incoming {
-    font-size: 11px; color: var(--mix-color); background: #f5a62315;
-    border: 1px solid #f5a62340; border-radius: 20px; padding: 3px 10px;
-  }
+  .mix-toggle.incoming { background: #f5a62318; border-color: var(--mix-color); color: var(--mix-color); cursor: pointer; }
+  .mix-toggle.incoming:hover { background: #f5a62330; }
   .mix-amount-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
   .mix-amount-wrap input {
     width: 68px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
@@ -983,7 +982,12 @@ function renderSequence() {
     const thisMix = item.mix?.enabled && !isLast;
     const postureTotal = seqItemPostureTotal(item);
     const overflow = postureTotal - item.duration;
-    const effDur = thisMix ? item.duration - item.mix.amount / 2 : item.duration;
+    // Split each pair's overlap/2 saving evenly: each song shows −overlap/4
+    // so card durations still sum to the correct effective total
+    const outMixCut = thisMix ? item.mix.amount / 4 : 0;
+    const inMixCut  = prevMix ? state.sequence[idx-1].mix.amount / 4 : 0;
+    const effDur = item.duration - outMixCut - inMixCut;
+    const isMixAffected = thisMix || prevMix;
 
     const wrapper = document.createElement('div');
     wrapper.className = 'song-wrapper';
@@ -1007,21 +1011,30 @@ function renderSequence() {
           <div class="song-title">${esc(item.title)}</div>
           <div class="song-artist">${esc(item.artist)}</div>
         </div>
-        <div class="song-duration${thisMix?' mix-adjusted':''}" title="${thisMix?'Effective (mix-adjusted)':'Duration'}">
+        <div class="song-duration${isMixAffected?' mix-adjusted':''}"
+             title="${isMixAffected?`Effective after mix (full: ${fmtTime(item.duration)})`:fmtTime(item.duration)}">
           ${fmtTime(effDur)}
         </div>
         <button class="btn icon sm" title="Remove" onclick="removeSeqItem('${item.id}')">✕</button>
       </div>
       <div class="song-controls">
-        ${prevMix ? `<div class="mix-incoming">⇦ mix in</div>` : ''}
+        ${prevMix ? `
+          <div class="mix-toggle incoming" onclick="toggleMixFromPrev('${item.id}')"
+               title="Mixed with song #${idx} — click to remove mix">
+            ⇄ Mixed with #${idx}
+          </div>
+        ` : ''}
         ${!isLast ? `
-          <div class="mix-toggle${thisMix?' active':''}" onclick="toggleMix('${item.id}')">⇄ Mix out</div>
+          <div class="mix-toggle${thisMix?' active':''}" onclick="toggleMix('${item.id}')"
+               title="${thisMix ? 'Click to remove mix with next song' : 'Mix this song into the next'}">
+            ⇄ ${thisMix ? 'Mixing into #'+(idx+2) : 'Mix with next'}
+          </div>
           ${thisMix ? `
             <div class="mix-amount-wrap">
               overlap
               <input type="text" value="${fmtTime(item.mix.amount)}" placeholder="0:30"
                      onchange="updateMixAmount('${item.id}',this.value)" onclick="event.stopPropagation()">
-              saves ${fmtTime(item.mix.amount/2)}
+              · saves ${fmtTime(item.mix.amount/2)}
             </div>
           ` : ''}
         ` : ''}
@@ -1153,6 +1166,14 @@ function toggleMix(seqId) {
   if (idx >= state.sequence.length - 1) { toast("Can't mix the last song"); return; }
   item.mix.enabled = !item.mix.enabled;
   if (item.mix.enabled && !item.mix.amount) item.mix.amount = 30;
+  save(); renderSequence();
+}
+// Toggle off the mix that the PREVIOUS song has set (called from the incoming song)
+function toggleMixFromPrev(seqId) {
+  const idx = state.sequence.findIndex(s => s.id === seqId);
+  if (idx <= 0) return;
+  const prev = state.sequence[idx - 1];
+  prev.mix.enabled = false;
   save(); renderSequence();
 }
 function updateMixAmount(seqId, val) {
