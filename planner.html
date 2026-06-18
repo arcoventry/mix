@@ -227,13 +227,24 @@
 
   /* ── POSTURE ROW ON SONG ── */
   .posture-row {
-    background: var(--bg3); border-radius: 6px; overflow: hidden;
+    background: var(--bg3); border-radius: 6px; overflow: visible;
     border: 1px solid var(--border); display: flex; flex-direction: column;
+    position: relative; transition: opacity .15s;
+  }
+  .posture-row.dragging { opacity: 0.35; }
+  .posture-row.drop-before::before {
+    content: ''; position: absolute; top: -3px; left: 4px; right: 4px;
+    height: 2px; background: var(--accent); border-radius: 1px; z-index: 3;
   }
   .posture-row .variation-legend { background: var(--bg3); }
   .posture-row-header {
     display: flex; align-items: center; gap: 8px; padding: 6px 8px;
   }
+  .posture-drag-handle {
+    cursor: grab; color: var(--text3); font-size: 14px; flex-shrink: 0;
+    padding-right: 2px; line-height: 1; user-select: none;
+  }
+  .posture-drag-handle:active { cursor: grabbing; }
   .posture-color-swatch {
     width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0;
   }
@@ -1412,8 +1423,14 @@ function buildPostureRows(seqItem) {
 function buildPostureRowHTML(seqId, entry, p) {
   const varBar = buildVariationBar(p);
   return `
-    <div class="posture-row">
+    <div class="posture-row" draggable="true"
+         ondragstart="onPostureRowDragStart(event,'${seqId}','${entry.id}')"
+         ondragend="onPostureRowDragEnd(event)"
+         ondragover="onPostureRowDragOver(event,'${seqId}','${entry.id}')"
+         ondragleave="onPostureRowDragLeave(event)"
+         ondrop="onPostureRowDrop(event,'${seqId}','${entry.id}')">
       <div class="posture-row-header">
+        <span class="posture-drag-handle" title="Drag to reorder or move to another song">⠿</span>
         <div class="posture-color-swatch" style="background:${p.color}"></div>
         <div class="posture-row-name">${esc(p.name)}</div>
         <div class="posture-row-dur">${fmtTime(p.duration)}</div>
@@ -1735,6 +1752,7 @@ function renderTimeline() {
 //  DRAG & DROP
 // ══════════════════════════════════════════════════════════════════
 let dragSrc = null;
+let postureRowDrag = null; // { fromSeqId, entryId }
 
 // Posture from library → song card
 function onPostureDragStart(e, postureId) {
@@ -1760,6 +1778,52 @@ function onSongHistDragEnd(e) {
   dragSrc = null; clearDragStyles();
 }
 
+// Posture row within sequence — reorder within song or move to another
+function onPostureRowDragStart(e, seqId, entryId) {
+  e.stopPropagation(); // prevent song card from hijacking the drag
+  dragSrc = 'seq-posture';
+  postureRowDrag = { fromSeqId: seqId, entryId };
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', `seq-posture:${seqId}:${entryId}`);
+  setTimeout(() => e.currentTarget.classList.add('dragging'), 0);
+}
+function onPostureRowDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  dragSrc = null; postureRowDrag = null; clearDragStyles();
+}
+function onPostureRowDragOver(e, seqId, entryId) {
+  if (dragSrc !== 'seq-posture') return;
+  e.preventDefault(); e.stopPropagation();
+  e.dataTransfer.dropEffect = 'move';
+  if (postureRowDrag?.entryId === entryId) return; // hovering over self
+  document.querySelectorAll('.posture-row.drop-before').forEach(el => el.classList.remove('drop-before'));
+  e.currentTarget.classList.add('drop-before');
+}
+function onPostureRowDragLeave(e) {
+  e.currentTarget.classList.remove('drop-before');
+}
+function onPostureRowDrop(e, toSeqId, insertBeforeEntryId) {
+  e.preventDefault(); e.stopPropagation();
+  e.currentTarget.classList.remove('drop-before');
+  if (!postureRowDrag) return;
+  const { fromSeqId, entryId } = postureRowDrag;
+  if (fromSeqId === toSeqId && entryId === insertBeforeEntryId) return;
+  movePosture(fromSeqId, entryId, toSeqId, insertBeforeEntryId);
+}
+function movePosture(fromSeqId, entryId, toSeqId, insertBeforeEntryId) {
+  const fromItem = getSeqItem(fromSeqId);
+  const toItem = getSeqItem(toSeqId);
+  if (!fromItem || !toItem) return;
+  const fromIdx = fromItem.postures.findIndex(e => e.id === entryId);
+  if (fromIdx === -1) return;
+  const [entry] = fromItem.postures.splice(fromIdx, 1);
+  const insertIdx = insertBeforeEntryId
+    ? toItem.postures.findIndex(e => e.id === insertBeforeEntryId)
+    : -1;
+  toItem.postures.splice(insertIdx === -1 ? toItem.postures.length : insertIdx, 0, entry);
+  save(); renderSequence();
+}
+
 // Song card reorder
 let cardDragId = null;
 function onSongCardDragStart(e, seqId) {
@@ -1773,11 +1837,13 @@ function onSongCardDragEnd(e) {
 }
 function onSongCardDragOver(e, seqId) {
   e.preventDefault();
-  const data = e.dataTransfer.getData('text/plain') || '';
-  if (dragSrc === 'posture' || data.startsWith('posture:')) {
+  if (dragSrc === 'posture') {
     e.dataTransfer.dropEffect = 'copy';
     e.currentTarget.classList.add('posture-drag-over');
     e.currentTarget.classList.remove('drag-over');
+  } else if (dragSrc === 'seq-posture' && postureRowDrag?.fromSeqId !== seqId) {
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('posture-drag-over');
   } else if (dragSrc === 'song-card' && cardDragId !== seqId) {
     e.dataTransfer.dropEffect = 'move';
     e.currentTarget.classList.add('drag-over');
@@ -1794,6 +1860,8 @@ function onSongCardDrop(e, seqId) {
   const data = e.dataTransfer.getData('text/plain');
   if (data.startsWith('posture:')) {
     dropPostureOnSong(seqId, data.replace('posture:',''));
+  } else if (data.startsWith('seq-posture:') && postureRowDrag) {
+    movePosture(postureRowDrag.fromSeqId, postureRowDrag.entryId, seqId, null);
   } else if (data.startsWith('card:')) {
     const fromId = data.replace('card:','');
     if (fromId !== seqId) reorderSeq(fromId, seqId);
@@ -1843,8 +1911,8 @@ function reorderSeq(fromId, toId) {
 }
 
 function clearDragStyles() {
-  document.querySelectorAll('.drag-over,.posture-drag-over').forEach(el =>
-    el.classList.remove('drag-over','posture-drag-over')
+  document.querySelectorAll('.drag-over,.posture-drag-over,.drop-before').forEach(el =>
+    el.classList.remove('drag-over','posture-drag-over','drop-before')
   );
 }
 
