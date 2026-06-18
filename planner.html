@@ -175,12 +175,17 @@
     background: #f5a62318; border-color: var(--mix-color); color: var(--mix-color); cursor: pointer;
   }
   .mix-toggle.incoming:hover { background: #f5a62335; }
-  .mix-amount-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
-  .mix-amount-wrap input {
-    width: 68px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  .mix-length-row {
+    display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2);
+    padding: 2px 0; flex-wrap: wrap;
+  }
+  .mix-length-label { color: var(--text3); white-space: nowrap; }
+  .mix-length-input {
+    width: 72px; background: var(--bg); border: 1px solid var(--mix-color); border-radius: 6px;
     color: var(--text); font-size: 12px; padding: 3px 7px; text-align: center;
   }
-  .mix-amount-wrap input:focus { outline: none; border-color: var(--mix-color); }
+  .mix-length-input:focus { outline: none; box-shadow: 0 0 0 2px #f5a62340; }
+  .mix-savings { color: var(--warn); font-weight: 700; white-space: nowrap; }
 
   /* ── POSTURES ON SONG ── */
   .song-postures-area { padding: 0 12px 10px; display: flex; flex-direction: column; gap: 6px; min-height: 36px; }
@@ -645,7 +650,14 @@ function load() {
   if (!state.variationTypes) state.variationTypes = [];
   if (!state.classes) state.classes = [];
   if (!state.activeClassId) state.activeClassId = null;
-  state.sequence.forEach(s => { if (!s.postures) s.postures = []; });
+  state.sequence.forEach(s => {
+    if (!s.postures) s.postures = [];
+    // Migrate old mix.amount to new outMixedLength/inMixedLength
+    if (s.mix?.enabled && s.mix.amount > 0 && s.mix.outMixedLength == null) {
+      s.mix.outMixedLength = Math.max(0, s.duration - s.mix.amount / 2);
+      s.mix.inMixedLength = null; // will default to next song's full duration
+    }
+  });
 }
 
 // ── CLASSES ────────────────────────────────────────────────────────
@@ -705,8 +717,12 @@ function calcEffectiveTime() {
   let total = 0, mixSaved = 0;
   state.sequence.forEach((item, i) => {
     total += item.duration || 0;
-    if (item.mix?.enabled && item.mix.amount > 0 && i < state.sequence.length - 1)
-      mixSaved += item.mix.amount / 2;
+    if (item.mix?.enabled && i < state.sequence.length - 1) {
+      const nextItem = state.sequence[i + 1];
+      const outSaved = Math.max(0, item.duration - (item.mix.outMixedLength ?? item.duration));
+      const inSaved  = nextItem ? Math.max(0, nextItem.duration - (item.mix.inMixedLength ?? nextItem.duration)) : 0;
+      mixSaved += outSaved + inSaved;
+    }
   });
   return { total, effective: total - mixSaved, mixSaved };
 }
@@ -1133,15 +1149,15 @@ function renderSequence() {
 
   state.sequence.forEach((item, idx) => {
     const isLast = idx === state.sequence.length - 1;
-    const prevMix = idx > 0 && state.sequence[idx-1].mix?.enabled;
+    const prevItem = idx > 0 ? state.sequence[idx - 1] : null;
+    const prevMix = prevItem?.mix?.enabled ?? false;
     const thisMix = item.mix?.enabled && !isLast;
     const postureTotal = seqItemPostureTotal(item);
     const overflow = postureTotal - item.duration;
-    // Split each pair's overlap/2 saving evenly: each song shows −overlap/4
-    // so card durations still sum to the correct effective total
-    const outMixCut = thisMix ? item.mix.amount / 4 : 0;
-    const inMixCut  = prevMix ? state.sequence[idx-1].mix.amount / 4 : 0;
-    const effDur = item.duration - outMixCut - inMixCut;
+    // Each song shows its mixed length when in a mix pair
+    const outMixedLen = thisMix ? (item.mix.outMixedLength ?? item.duration) : item.duration;
+    const inMixedLen  = prevMix ? (prevItem.mix.inMixedLength ?? item.duration) : item.duration;
+    const effDur = Math.min(outMixedLen, inMixedLen);
     const isMixAffected = thisMix || prevMix;
 
     const wrapper = document.createElement('div');
@@ -1178,6 +1194,16 @@ function renderSequence() {
                title="Mixed with song #${idx} — click to remove mix">
             Mixed with #${idx}
           </div>
+          <div class="mix-length-row">
+            <span class="mix-length-label">Mixed length:</span>
+            <input class="mix-length-input" type="text"
+                   value="${fmtTime(prevItem.mix.inMixedLength ?? item.duration)}"
+                   placeholder="${fmtTime(item.duration)}"
+                   onchange="updateInMixedLength('${prevItem.id}','${item.id}',this.value)"
+                   onclick="event.stopPropagation()">
+            <span class="mix-savings">−${fmtTime(Math.max(0, item.duration - (prevItem.mix.inMixedLength ?? item.duration)))}</span>
+            <span style="color:var(--text3);font-size:11px">(full: ${fmtTime(item.duration)})</span>
+          </div>
         ` : ''}
         ${!isLast ? `
           <div class="mix-toggle${thisMix?' active':''}" onclick="toggleMix('${item.id}')"
@@ -1185,11 +1211,15 @@ function renderSequence() {
             ${thisMix ? 'Mixing into #'+(idx+2) : 'Mix with next'}
           </div>
           ${thisMix ? `
-            <div class="mix-amount-wrap">
-              overlap
-              <input type="text" value="${fmtTime(item.mix.amount)}" placeholder="0:30"
-                     onchange="updateMixAmount('${item.id}',this.value)" onclick="event.stopPropagation()">
-              · saves ${fmtTime(item.mix.amount/2)}
+            <div class="mix-length-row">
+              <span class="mix-length-label">Mixed length:</span>
+              <input class="mix-length-input" type="text"
+                     value="${fmtTime(item.mix.outMixedLength ?? item.duration)}"
+                     placeholder="${fmtTime(item.duration)}"
+                     onchange="updateOutMixedLength('${item.id}',this.value)"
+                     onclick="event.stopPropagation()">
+              <span class="mix-savings">−${fmtTime(Math.max(0, item.duration - (item.mix.outMixedLength ?? item.duration)))}</span>
+              <span style="color:var(--text3);font-size:11px">(full: ${fmtTime(item.duration)})</span>
             </div>
           ` : ''}
         ` : ''}
@@ -1216,13 +1246,17 @@ function renderSequence() {
 
     // Mix connector
     if (thisMix) {
+      const nextItem = state.sequence[idx + 1];
+      const outSaved = Math.max(0, item.duration - (item.mix.outMixedLength ?? item.duration));
+      const inSaved  = nextItem ? Math.max(0, nextItem.duration - (item.mix.inMixedLength ?? nextItem.duration)) : 0;
+      const totalSaved = outSaved + inSaved;
+      const pct = item.duration > 0 ? Math.min(50, (outSaved / item.duration) * 100) : 0;
       const conn = document.createElement('div');
       conn.className = 'mix-connector visible';
-      const pct = item.duration > 0 ? Math.min(100, (item.mix.amount/item.duration)*100) : 0;
       conn.innerHTML = `
         <div class="mix-connector-inner">
-          <span>⇄ Mix: ${fmtTime(item.mix.amount)} overlap</span>
-          <span style="color:var(--text2)">saves ${fmtTime(item.mix.amount/2)}</span>
+          <span>⇄ Crossfade</span>
+          <span style="color:var(--text2)">saves ${fmtTime(totalSaved)} total</span>
         </div>
         <div class="mix-overlap-bar">
           <div class="mix-overlap-fill" style="width:${pct.toFixed(1)}%"></div>
@@ -1339,7 +1373,12 @@ function toggleMix(seqId) {
   const idx = state.sequence.indexOf(item);
   if (idx >= state.sequence.length - 1) { toast("Can't mix the last song"); return; }
   item.mix.enabled = !item.mix.enabled;
-  if (item.mix.enabled && !item.mix.amount) item.mix.amount = 30;
+  if (item.mix.enabled) {
+    const nextItem = state.sequence[idx + 1];
+    // Default mixed lengths to full duration so user edits down
+    if (item.mix.outMixedLength == null) item.mix.outMixedLength = item.duration;
+    if (item.mix.inMixedLength == null && nextItem) item.mix.inMixedLength = nextItem.duration;
+  }
   save(); renderSequence();
 }
 // Toggle off the mix that the PREVIOUS song has set (called from the incoming song)
@@ -1350,10 +1389,20 @@ function toggleMixFromPrev(seqId) {
   prev.mix.enabled = false;
   save(); renderSequence();
 }
-function updateMixAmount(seqId, val) {
+function updateOutMixedLength(seqId, val) {
   const item = getSeqItem(seqId);
   const secs = parseTime(val);
-  if (secs !== null && secs >= 0) { item.mix.amount = secs; save(); renderSequence(); }
+  if (secs !== null && secs > 0 && secs <= item.duration) {
+    item.mix.outMixedLength = secs; save(); renderSequence();
+  }
+}
+function updateInMixedLength(prevSeqId, incomingSeqId, val) {
+  const prevItem = getSeqItem(prevSeqId);
+  const incoming = getSeqItem(incomingSeqId);
+  const secs = parseTime(val);
+  if (secs !== null && secs > 0 && incoming && secs <= incoming.duration) {
+    prevItem.mix.inMixedLength = secs; save(); renderSequence();
+  }
 }
 function validateMixes() {
   const last = state.sequence[state.sequence.length-1];
@@ -1388,11 +1437,14 @@ function renderTimeline() {
   let segs = '', labelData = [], acc = 0;
   state.sequence.forEach((item, idx) => {
     const isLast = idx === state.sequence.length - 1;
-    const mixAdj = item.mix?.enabled && !isLast ? item.mix.amount/2 : 0;
-    const disp = item.duration - mixAdj;
+    const prevItem = idx > 0 ? state.sequence[idx - 1] : null;
+    const thisMix = item.mix?.enabled && !isLast;
+    const prevMix = prevItem?.mix?.enabled ?? false;
+    const outSaved = thisMix ? Math.max(0, item.duration - (item.mix.outMixedLength ?? item.duration)) : 0;
+    const inSaved  = prevMix ? Math.max(0, item.duration - (prevItem.mix.inMixedLength ?? item.duration)) : 0;
+    const disp = Math.max(1, item.duration - outSaved - inSaved);
     const pct = (disp / effective) * 100;
 
-    // Color: use first posture's color, else gray
     let bgColor = '#2e3348';
     if (item.postures.length > 0) {
       const p = getPosture(item.postures[0].postureId);
@@ -1402,7 +1454,7 @@ function renderTimeline() {
     const lbl = item.title.length > 12 ? item.title.slice(0,11)+'…' : item.title;
     segs += `<div class="timeline-seg" style="flex:${pct.toFixed(3)};background:${bgColor}" title="${esc(item.title)} — ${fmtTime(disp)}">
       <span>${pct>5?lbl:''}</span>
-      ${item.mix?.enabled && !isLast ? `<div class="timeline-mix-overlay" style="width:${Math.min(50,(item.mix.amount/item.duration)*100).toFixed(1)}%"></div>` : ''}
+      ${thisMix ? `<div class="timeline-mix-overlay" style="width:${Math.min(50,(outSaved/Math.max(1,item.duration))*100).toFixed(1)}%"></div>` : ''}
     </div>`;
     labelData.push({ pct: (acc/effective)*100, time: acc });
     acc += disp;
