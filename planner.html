@@ -179,8 +179,9 @@
   /* ── POSTURE ROW ON SONG ── */
   .posture-row {
     background: var(--bg3); border-radius: 6px; overflow: hidden;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border); display: flex; flex-direction: column;
   }
+  .posture-row .variation-legend { background: var(--bg3); }
   .posture-row-header {
     display: flex; align-items: center; gap: 8px; padding: 6px 8px;
   }
@@ -193,21 +194,28 @@
 
   /* ── VARIATION BAR ── */
   .variation-bar {
-    display: flex; height: 20px; overflow: hidden; border-radius: 0 0 5px 5px;
+    display: flex; height: 18px; overflow: hidden; border-radius: 0;
   }
   .var-seg {
-    display: flex; align-items: center; justify-content: center;
-    font-size: 9px; font-weight: 700; color: #fff; overflow: hidden;
-    text-shadow: 0 1px 2px #0008; transition: flex .2s;
-    min-width: 0;
+    height: 100%; transition: flex .2s; min-width: 0; flex-shrink: 0;
   }
   .var-seg.free {
     background: repeating-linear-gradient(
-      45deg, transparent, transparent 3px, #ffffff0a 3px, #ffffff0a 6px
+      45deg, transparent, transparent 3px, #ffffff08 3px, #ffffff08 6px
     );
-    color: var(--text3);
   }
-  .var-seg-label { white-space: nowrap; overflow: hidden; padding: 0 4px; }
+  /* ── VARIATION LEGEND (below bar, always shows names) ── */
+  .variation-legend {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 4px 12px; padding: 5px 8px 7px;
+    border-top: 1px solid var(--border);
+    border-radius: 0 0 5px 5px;
+  }
+  .var-legend-item { display: flex; align-items: center; gap: 4px; cursor: default; }
+  .var-legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .var-legend-name { font-size: 11px; font-weight: 700; color: var(--text); }
+  .var-legend-dur { font-size: 11px; color: var(--text2); }
+  .var-legend-free { font-size: 11px; color: var(--text3); font-style: italic; }
 
   /* ── OVERFLOW WARNING ── */
   .overflow-warning {
@@ -308,25 +316,26 @@
 
   /* ── VARIATION EDITOR (in posture modal) ── */
   .var-editor-row {
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 7px;
     background: var(--bg3); border: 1px solid var(--border);
-    border-radius: 6px; padding: 5px 8px;
+    border-radius: 6px; padding: 6px 8px;
   }
   .var-editor-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
   .var-editor-name {
-    flex: 1; background: transparent; border: none; color: var(--text);
-    font-size: 13px; font-weight: 600; min-width: 0;
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 5px; color: var(--text); font-size: 13px; font-weight: 600;
+    padding: 3px 7px; min-width: 0;
   }
-  .var-editor-name:focus { outline: none; }
+  .var-editor-name:focus { outline: none; border-color: var(--accent); }
   .var-editor-dur {
-    width: 62px; background: var(--bg); border: 1px solid var(--border);
+    width: 64px; background: var(--bg); border: 1px solid var(--border);
     border-radius: 5px; color: var(--text); font-size: 12px; padding: 3px 6px;
-    text-align: center;
+    text-align: center; flex-shrink: 0;
   }
   .var-editor-dur:focus { outline: none; border-color: var(--accent); }
 
   /* ── VARIATION TOTAL BAR ── */
-  .var-total-bar-wrap { margin-top: 4px; }
+  .var-total-bar-wrap { margin-top: 6px; }
   .var-total-bar {
     height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; position: relative;
   }
@@ -336,8 +345,17 @@
   }
   .var-total-label.over { color: var(--danger); }
 
-  /* ── QUICK-ADD BUTTONS ── */
-  .quick-add-row { display: flex; gap: 4px; flex-wrap: wrap; }
+  /* ── VARIATION TYPE CHIPS (quick-pick library) ── */
+  .var-type-chips {
+    display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 0 2px;
+  }
+  .var-type-chip {
+    background: var(--bg3); border: 1px dashed var(--border); border-radius: 16px;
+    padding: 4px 11px; font-size: 12px; font-weight: 600; color: var(--text2);
+    cursor: pointer; transition: all .15s; user-select: none;
+  }
+  .var-type-chip:hover { border-color: var(--accent); color: var(--text); border-style: solid; }
+  .var-type-chip.new-type { color: var(--text3); font-weight: 400; }
 
   /* ── SCROLLBAR ── */
   ::-webkit-scrollbar { width: 5px; }
@@ -470,22 +488,16 @@
 
       <!-- VARIATIONS -->
       <div class="field">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <label style="margin:0">Variations</label>
-          <div class="quick-add-row">
-            <button class="btn secondary xs" onclick="addVariationRow('Hold')">+ Hold</button>
-            <button class="btn secondary xs" onclick="addVariationRow('Pulse')">+ Pulse</button>
-            <button class="btn secondary xs" onclick="addVariationRow('Large ROM')">+ Large ROM</button>
-            <button class="btn secondary xs" onclick="addVariationRow('')">+ Custom</button>
-          </div>
-        </div>
+        <label>Variations <span id="pm-var-count" style="font-weight:400;color:var(--text3)"></span></label>
         <div id="pm-vars" style="display:flex;flex-direction:column;gap:4px;min-height:32px">
-          <div id="pm-vars-empty" style="font-size:11px;color:var(--text3);text-align:center;padding:10px">
-            No variations — add using the buttons above
+          <div id="pm-vars-empty" style="font-size:11px;color:var(--text3);text-align:center;padding:12px 0 4px">
+            No variations yet — pick a type below or add a custom one
           </div>
         </div>
+        <!-- Type chip library — populated from state.variationTypes -->
+        <div class="var-type-chips" id="pm-type-chips"></div>
         <div class="var-total-bar-wrap">
-          <div class="var-total-bar"><div class="var-total-fill" id="pm-var-fill" style="width:0%;background:var(--success)"></div></div>
+          <div class="var-total-bar"><div class="var-total-fill" id="pm-var-fill" style="width:0%"></div></div>
           <div class="var-total-label" id="pm-var-label">0:00 used of 0:00</div>
         </div>
       </div>
@@ -558,9 +570,10 @@ function varColor(baseHex, idx) {
 
 // ── STATE ──────────────────────────────────────────────────────────
 let state = {
-  postures: [],     // {id, name, duration(s), color, variations:[{id,name,duration(s)}]}
-  songHistory: [],  // {id, title, artist, duration(s)}
-  sequence: [],     // {id, songId, title, artist, duration(s), mix:{enabled,amount(s)}, postures:[{id,postureId,notes}]}
+  postures: [],        // {id, name, duration(s), color, variations:[{id,name,duration(s)}]}
+  songHistory: [],     // {id, title, artist, duration(s)}
+  sequence: [],        // {id, songId, title, artist, duration(s), mix:{enabled,amount(s)}, postures:[{id,postureId,notes}]}
+  variationTypes: [],  // string[] — saved type names (global library, auto-grows)
 };
 
 // ── MODAL EDIT STATE ───────────────────────────────────────────────
@@ -598,6 +611,7 @@ function load() {
   if (!state.postures) state.postures = [];
   if (!state.songHistory) state.songHistory = [];
   if (!state.sequence) state.sequence = [];
+  if (!state.variationTypes) state.variationTypes = [];
   state.sequence.forEach(s => { if (!s.postures) s.postures = []; });
 }
 
@@ -686,6 +700,7 @@ function openPostureModal(editId) {
 
   renderColorPicker('pm-colors', pmSelectedColor, c => { pmSelectedColor = c; renderColorPicker('pm-colors', pmSelectedColor, null); renderVarRows(); });
   renderVarRows();
+  renderTypeChips();
   updateVarBar();
   document.getElementById('posture-modal').classList.add('open');
   document.getElementById('pm-name').focus();
@@ -695,9 +710,27 @@ function closePostureModal() {
 }
 
 function addVariationRow(name) {
-  pmVariations.push({ id: uid(), name, duration: 0 });
+  // Save new type names to the global library
+  const trimmed = name.trim();
+  if (trimmed && !state.variationTypes.includes(trimmed)) {
+    state.variationTypes.push(trimmed);
+    save();
+  }
+  const newVar = { id: uid(), name: trimmed, duration: 0 };
+  pmVariations.push(newVar);
   renderVarRows();
   updateVarBar();
+  // Focus the duration input of the newly added row
+  setTimeout(() => {
+    const rows = document.querySelectorAll('#pm-vars .var-editor-row');
+    const lastRow = rows[rows.length - 1];
+    if (lastRow) lastRow.querySelector('.var-editor-dur')?.focus();
+  }, 30);
+}
+
+function addCustomVariationRow() {
+  const name = prompt('Variation name:');
+  if (name && name.trim()) addVariationRow(name.trim());
 }
 
 function removeVariationRow(vid) {
@@ -706,15 +739,29 @@ function removeVariationRow(vid) {
   updateVarBar();
 }
 
+// Render type chips from the global library
+function renderTypeChips() {
+  const container = document.getElementById('pm-type-chips');
+  if (!container) return;
+  const chips = state.variationTypes.map(t =>
+    `<div class="var-type-chip" onclick="addVariationRow('${esc(t)}')">${esc(t)}</div>`
+  ).join('');
+  container.innerHTML = chips +
+    `<div class="var-type-chip new-type" onclick="addCustomVariationRow()">+ Custom…</div>`;
+}
+
 function renderVarRows() {
   const container = document.getElementById('pm-vars');
   const emptyEl = document.getElementById('pm-vars-empty');
 
-  // Remove old rows (keep empty message)
   Array.from(container.children).forEach(c => { if (c !== emptyEl) c.remove(); });
+
+  const countEl = document.getElementById('pm-var-count');
+  if (countEl) countEl.textContent = pmVariations.length ? `(${pmVariations.length})` : '';
 
   if (pmVariations.length === 0) {
     emptyEl.style.display = 'block';
+    renderTypeChips();
     return;
   }
   emptyEl.style.display = 'none';
@@ -722,17 +769,30 @@ function renderVarRows() {
   pmVariations.forEach((v, idx) => {
     const row = document.createElement('div');
     row.className = 'var-editor-row';
+    row.dataset.vid = v.id;
     const color = varColor(pmSelectedColor, idx);
     row.innerHTML = `
       <div class="var-editor-swatch" style="background:${color}"></div>
       <input class="var-editor-name" type="text" value="${esc(v.name)}" placeholder="Name"
-             oninput="pmVariations[${idx}].name=this.value">
+             oninput="updateVarName('${v.id}',this.value)">
       <input class="var-editor-dur" type="text" value="${v.duration>0?fmtTime(v.duration):''}" placeholder="0:30"
-             oninput="pmVariations[${idx}].duration=parseTime(this.value)||0;updateVarBar()">
+             oninput="updateVarDur('${v.id}',this.value)">
       <button class="btn icon xs" onclick="removeVariationRow('${v.id}')">✕</button>
     `;
     container.appendChild(row);
   });
+
+  renderTypeChips();
+}
+
+// Update individual variation without full re-render (preserves focus)
+function updateVarName(vid, value) {
+  const v = pmVariations.find(x => x.id === vid);
+  if (v) v.name = value;
+}
+function updateVarDur(vid, value) {
+  const v = pmVariations.find(x => x.id === vid);
+  if (v) { v.duration = parseTime(value) || 0; updateVarBar(); }
 }
 
 function updateVarBar() {
@@ -767,6 +827,11 @@ function savePosture() {
   const cleanVars = pmVariations
     .filter(v => v.name.trim())
     .map(v => ({ id: v.id, name: v.name.trim(), duration: v.duration||0 }));
+
+  // Persist any new type names to the global library
+  cleanVars.forEach(v => {
+    if (!state.variationTypes.includes(v.name)) state.variationTypes.push(v.name);
+  });
 
   if (editingPostureId) {
     const p = getPosture(editingPostureId);
@@ -1119,24 +1184,41 @@ function buildVariationBar(p) {
   const usedByVars = p.variations.reduce((s,v)=>s+v.duration,0);
   const free = Math.max(0, total - usedByVars);
 
+  // Color bar (proportional segments — no text, just color)
   const segs = p.variations.map((v, idx) => {
     const flex = total > 0 ? (v.duration / total) * 100 : 0;
     if (flex === 0) return '';
-    const color = varColor(p.color, idx);
-    const label = v.name.length > 10 ? v.name.slice(0,9)+'…' : v.name;
-    return `<div class="var-seg" style="flex:${flex.toFixed(2)};background:${color}" title="${esc(v.name)}: ${fmtTime(v.duration)}">
-      <span class="var-seg-label">${flex>8?esc(label):''}</span>
-    </div>`;
+    return `<div class="var-seg" style="flex:${flex.toFixed(2)};background:${varColor(p.color,idx)}"
+                 title="${esc(v.name)}: ${fmtTime(v.duration)}"></div>`;
   }).join('');
 
   const freeFlex = total > 0 ? (free / total) * 100 : 0;
   const freeSeg = freeFlex > 0.5
-    ? `<div class="var-seg free" style="flex:${freeFlex.toFixed(2)}" title="Unassigned: ${fmtTime(free)}">
-        <span class="var-seg-label">${freeFlex>8?fmtTime(free):''}</span>
+    ? `<div class="var-seg free" style="flex:${freeFlex.toFixed(2)}" title="Unassigned: ${fmtTime(free)}"></div>`
+    : '';
+
+  // Named legend — always visible regardless of segment width
+  const legendItems = p.variations
+    .filter(v => v.duration > 0)
+    .map((v, idx) => `
+      <div class="var-legend-item" title="${esc(v.name)}: ${fmtTime(v.duration)}">
+        <div class="var-legend-dot" style="background:${varColor(p.color,idx)}"></div>
+        <span class="var-legend-name">${esc(v.name)}</span>
+        <span class="var-legend-dur">${fmtTime(v.duration)}</span>
+      </div>
+    `).join('');
+
+  const freeLegend = free > 5
+    ? `<div class="var-legend-item">
+        <div class="var-legend-dot" style="background:var(--border)"></div>
+        <span class="var-legend-free">${fmtTime(free)} free</span>
        </div>`
     : '';
 
-  return `<div class="variation-bar">${segs}${freeSeg}</div>`;
+  return `
+    <div class="variation-bar">${segs}${freeSeg}</div>
+    <div class="variation-legend">${legendItems}${freeLegend}</div>
+  `;
 }
 
 function removePostureFromSong(seqId, entryId) {
@@ -1380,6 +1462,9 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 
 // ── SEED DATA ──────────────────────────────────────────────────────
 function seedDefaults() {
+  if (!state.variationTypes.length) {
+    state.variationTypes = ['Hold', 'Pulse', 'Large ROM', 'Tempo', 'Flow', 'Isometric'];
+  }
   if (!state.postures.length) {
     const defaults = [
       { name: 'Warm-Up',       duration: 180, color: COLORS[1],
