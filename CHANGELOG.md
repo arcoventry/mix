@@ -4,6 +4,65 @@ All notable changes to the Song ↔ Exercise Sequence Planner are documented her
 
 ---
 
+## [2.0.0] — 2026-06-18
+
+### Overview
+**Postures now flow across your whole class.** This release redefines the core model: songs are no longer hard containers that each posture must fit inside. Instead, the playlist is a continuous backdrop, and postures flow freely across song boundaries — exactly like a real class, where a single position can carry over from one track into the next. Existing plans load unchanged; nothing in your saved data needs to migrate.
+
+---
+
+### The New Model — Postures Flow Across Songs
+
+#### Cross-Song Posture Flow
+- A posture is no longer locked to one song. If a 5-minute posture is placed in a 4-minute song, the remaining minute now flows into the next song automatically
+- The continuation is called out visually rather than blocked — songs are a backdrop, not a cage
+- Carry-over math accounts for mixed song lengths: when a song is shortened by a crossfade, the posture flow uses the *effective* (mixed) duration, not the raw track length
+- A warning only appears when overflow has nowhere to go — i.e. the **last** song in the plan is exceeded — alongside a quick **+ Song** button to extend the class
+
+#### Auto-Reorder — No More Dumping Everything Into Song 1
+- Drop a posture into an already-full song and it automatically bumps down to the next song that has room — the card physically moves to where the posture actually starts playing
+- A posture keeps its home song as long as it *starts* there, so legitimate single-posture overflow across a boundary still works
+- The move is one-directional: postures are only ever bumped **down**, never pulled up into an earlier song, so an intentional drag into a later song is always respected
+- The drop toast reports where the posture landed, e.g. *"🔁 Standing Climb bumped to 'Track 2' — song 1 was full"*
+
+---
+
+### New Features
+
+#### Drag Postures Between and Within Songs
+- Every posture row now has a `⠿` grab handle
+- Drag a row up or down to reorder it within the same song — a blue insert line shows where it will land
+- Drag a row onto another song to move the posture there — drop it before a specific row, or onto the card body to append to the end
+- The target song highlights green to confirm a valid drop
+
+#### Per-Card Song Time Bar
+- Each song card now shows a proportional **class-time bar**, mirroring the bottom timeline
+- Hatched segment at the left edge = a posture carrying in from the previous song
+- Solid segments = postures starting within this song, tinted by their variation colors
+- A glowing right edge = a posture that continues into the next song
+- Hover any segment for the posture name, its clipped duration, and carry-in / overflow flags
+
+---
+
+### Changes
+
+#### Two-Layer Timeline Redesign
+- The bottom timeline was rebuilt as two layers: a dim song-background layer and a layer of absolutely-positioned posture bars that span song boundaries freely
+- Posture bars are placed at their true global class-time positions, so a posture crossing from one song into the next is drawn as a single continuous bar
+- Each bar is sub-divided into graduated variation tints; song boundary tick-lines and a per-variation color legend round it out
+
+#### Version Badge
+- A small `v2.0` badge now sits in the top bar next to the app title
+
+---
+
+### Technical
+- New `redistributePostures()` normalization pass runs at the top of `renderSequence()` and persists whenever a posture's home song changes, keeping the data model in sync with the visual flow
+- `computePostureEvents()` extracted as a single shared computation powering both the card time bars and the timeline, so the two can never disagree
+- `computeCarryOver()` reworked to propagate overflow between songs using effective mixed durations
+
+---
+
 ## [1.2.0] — 2026-06-18
 
 ### Overview

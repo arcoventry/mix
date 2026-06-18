@@ -45,6 +45,11 @@
   }
   #topbar h1 { font-size: 16px; font-weight: 700; color: var(--text); white-space: nowrap; }
   #topbar h1 span { color: var(--accent); }
+  .version-badge {
+    font-size: 10px; font-weight: 700; letter-spacing: .4px;
+    color: var(--accent); background: #4f8ef71f; border: 1px solid #4f8ef740;
+    border-radius: 10px; padding: 2px 7px; white-space: nowrap; align-self: center;
+  }
   .class-tabs { display: flex; gap: 6px; }
   .class-tab {
     padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
@@ -522,6 +527,7 @@
 <!-- TOP BAR -->
 <div id="topbar">
   <h1>Song <span>↔</span> Exercise Planner</h1>
+  <span class="version-badge" title="Release version">v2.0</span>
   <div class="class-tabs" id="class-tabs"></div>
   <div class="topbar-stats">
     <div class="stat">
