@@ -187,6 +187,35 @@
   .mix-length-input:focus { outline: none; box-shadow: 0 0 0 2px #f5a62340; }
   .mix-savings { color: var(--warn); font-weight: 700; white-space: nowrap; }
 
+  /* ── PLAYLIST CSV IMPORT ── */
+  .csv-drop-zone {
+    border: 2px dashed var(--border); border-radius: 8px;
+    padding: 20px 16px; text-align: center; cursor: pointer;
+    color: var(--text3); font-size: 13px; transition: border-color .15s, background .15s;
+  }
+  .csv-drop-zone:hover, .csv-drop-zone.drag-active {
+    border-color: var(--accent); background: #4f8ef710; color: var(--text2);
+  }
+  .csv-drop-zone.loaded { border-color: var(--success); color: var(--success); }
+  .csv-preview { max-height: 220px; overflow-y: auto; margin-top: 4px; }
+  .csv-track-row {
+    display: flex; align-items: center; gap: 8px; padding: 5px 2px;
+    border-bottom: 1px solid var(--border); font-size: 12px;
+  }
+  .csv-track-num { color: var(--text3); width: 22px; text-align: right; flex-shrink: 0; }
+  .csv-track-info { flex: 1; min-width: 0; }
+  .csv-track-title { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .csv-track-artist { color: var(--text2); font-size: 11px; }
+  .csv-track-dur { color: var(--text3); white-space: nowrap; flex-shrink: 0; font-size: 11px; }
+  .csv-mix-badge {
+    background: #f5a62318; border: 1px solid var(--mix-color); border-radius: 10px;
+    color: var(--mix-color); font-size: 10px; font-weight: 700; padding: 1px 7px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .csv-summary { font-size: 12px; color: var(--text2); padding: 8px 0 4px; }
+  .import-mode-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2); }
+  .import-mode-row input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; }
+
   /* ── POSTURES ON SONG ── */
   .song-postures-area { padding: 0 12px 10px; display: flex; flex-direction: column; gap: 6px; min-height: 36px; }
   .posture-drop-zone {
@@ -461,7 +490,10 @@
         <div id="postures-list"></div>
       </div>
       <div class="panel-section" id="section-songs">
-        <button class="btn sm" onclick="openSongModal()">+ Add Song</button>
+        <div style="display:flex;gap:6px;margin-bottom:2px">
+          <button class="btn sm" style="flex:1" onclick="openSongModal()">+ Add Song</button>
+          <button class="btn sm secondary" style="flex:1" onclick="openPlaylistModal()">+ Add Playlist</button>
+        </div>
         <div id="songs-list"></div>
       </div>
     </div>
@@ -534,6 +566,40 @@
     <div class="modal-footer">
       <button class="btn secondary" onclick="closePostureModal()">Cancel</button>
       <button class="btn" onclick="savePosture()">Save Posture</button>
+    </div>
+  </div>
+</div>
+
+<!-- PLAYLIST IMPORT MODAL -->
+<div class="modal-overlay" id="playlist-modal">
+  <div class="modal wide">
+    <h2>Import Playlist from CSV</h2>
+    <div class="modal-body">
+      <div class="field">
+        <label>Export your Spotify playlist via <a href="https://exportify.net" target="_blank" style="color:var(--accent)">Exportify</a>, then upload the CSV below.</label>
+        <div class="csv-drop-zone" id="csv-drop-zone"
+             onclick="document.getElementById('csv-file-input').click()"
+             ondragover="event.preventDefault();this.classList.add('drag-active')"
+             ondragleave="this.classList.remove('drag-active')"
+             ondrop="this.classList.remove('drag-active');event.preventDefault();handleCSVFile(event.dataTransfer.files[0])">
+          <div>Click to select a .csv file, or drag and drop here</div>
+          <div style="font-size:11px;margin-top:4px">Supports Exportify format — Track Name, Artist Name(s), Duration (ms)</div>
+        </div>
+        <input type="file" id="csv-file-input" accept=".csv" style="display:none"
+               onchange="handleCSVFile(this.files[0])">
+      </div>
+      <div id="csv-preview-wrap" style="display:none">
+        <div class="csv-summary" id="csv-summary"></div>
+        <div class="csv-preview" id="csv-preview"></div>
+        <div class="import-mode-row" style="margin-top:10px">
+          <input type="checkbox" id="csv-replace" checked>
+          <label for="csv-replace">Replace existing song library (uncheck to add without removing current songs)</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn secondary" onclick="closePlaylistModal()">Cancel</button>
+      <button class="btn" id="csv-import-btn" style="display:none" onclick="importPlaylist()">Import Songs</button>
     </div>
   </div>
 </div>
@@ -1594,6 +1660,153 @@ function clearDragStyles() {
   document.querySelectorAll('.drag-over,.posture-drag-over').forEach(el =>
     el.classList.remove('drag-over','posture-drag-over')
   );
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  CSV PLAYLIST IMPORT
+// ══════════════════════════════════════════════════════════════════
+let csvParsedTracks = [];
+
+function openPlaylistModal() {
+  csvParsedTracks = [];
+  const fi = document.getElementById('csv-file-input');
+  if (fi) fi.value = '';
+  document.getElementById('csv-preview-wrap').style.display = 'none';
+  document.getElementById('csv-import-btn').style.display = 'none';
+  document.getElementById('csv-drop-zone').className = 'csv-drop-zone';
+  document.getElementById('csv-drop-zone').innerHTML =
+    '<div>Click to select a .csv file, or drag and drop here</div>' +
+    '<div style="font-size:11px;margin-top:4px">Supports Exportify format — Track Name, Artist Name(s), Duration (ms)</div>';
+  document.getElementById('playlist-modal').classList.add('open');
+}
+function closePlaylistModal() {
+  document.getElementById('playlist-modal').classList.remove('open');
+}
+
+function handleCSVFile(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.csv')) { toast('Please select a .csv file'); return; }
+  const reader = new FileReader();
+  reader.onload = e => parseAndPreviewCSV(e.target.result);
+  reader.readAsText(file);
+}
+
+function parseCSVLine(line) {
+  const cols = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+    else if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { cols.push(cur); cur = ''; }
+    else cur += c;
+  }
+  cols.push(cur);
+  return cols.map(s => s.trim().replace(/^"|"$/g, ''));
+}
+
+function detectMixed(title) {
+  const t = title.toLowerCase();
+  if (/\bremix\b/.test(t)) return false;
+  if (/\bmixed\b/.test(t)) return true;
+  if (/continuous\s*mix/i.test(t)) return true;
+  if (/\(mix\)$/i.test(t)) return true;
+  return false;
+}
+
+function parseAndPreviewCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) { toast('CSV appears empty'); return; }
+
+  const rawHeaders = parseCSVLine(lines[0]);
+  const headers = rawHeaders.map(h => h.toLowerCase().replace(/[\s_\(\)]/g, ''));
+
+  const col = key => {
+    const variants = {
+      title:    ['trackname','title','name','song'],
+      artist:   ['artistnames','artistname','artist','artists'],
+      durMs:    ['durationms','duration'],
+      tempo:    ['tempo','bpm'],
+      energy:   ['energy'],
+    };
+    return (variants[key] || [key]).map(v => headers.findIndex(h => h.includes(v))).find(i => i >= 0) ?? -1;
+  };
+
+  const ti = col('title'), ai = col('artist'), di = col('durMs');
+  const tempoI = col('tempo'), energyI = col('energy');
+
+  if (ti === -1) { toast('No track name column found — is this an Exportify CSV?'); return; }
+
+  csvParsedTracks = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i]);
+    const title = cols[ti] || '';
+    if (!title) continue;
+    const artist = ai >= 0 ? (cols[ai] || '') : '';
+    let duration = 0;
+    if (di >= 0) {
+      const raw = parseFloat(cols[di]);
+      if (!isNaN(raw)) duration = raw > 10000 ? Math.round(raw / 1000) : Math.round(raw);
+    }
+    const tempo  = tempoI  >= 0 ? (parseFloat(cols[tempoI])  || null) : null;
+    const energy = energyI >= 0 ? (parseFloat(cols[energyI]) || null) : null;
+    csvParsedTracks.push({ title, artist, duration, mixed: detectMixed(title), tempo, energy });
+  }
+
+  if (!csvParsedTracks.length) { toast('No valid tracks found'); return; }
+
+  const mixedCount  = csvParsedTracks.filter(t => t.mixed).length;
+  const hasTempo    = csvParsedTracks.some(t => t.tempo !== null);
+  const hasEnergy   = csvParsedTracks.some(t => t.energy !== null);
+
+  document.getElementById('csv-summary').innerHTML =
+    `<strong>${csvParsedTracks.length} tracks</strong> found` +
+    (mixedCount ? ` &nbsp;·&nbsp; <span style="color:var(--mix-color)">⇄ ${mixedCount} detected as mixed</span>` : '') +
+    (hasTempo   ? ` &nbsp;·&nbsp; <span style="color:var(--text2)">BPM included</span>` : '') +
+    (hasEnergy  ? ` &nbsp;·&nbsp; <span style="color:var(--text2)">Energy included</span>` : '');
+
+  document.getElementById('csv-preview').innerHTML = csvParsedTracks.map((t, i) => `
+    <div class="csv-track-row">
+      <span class="csv-track-num">${i+1}</span>
+      <div class="csv-track-info">
+        <div class="csv-track-title">${esc(t.title)}</div>
+        <div class="csv-track-artist">${esc(t.artist)}</div>
+      </div>
+      <span class="csv-track-dur">${t.duration ? fmtTime(t.duration) : '--'}</span>
+      ${t.mixed ? '<span class="csv-mix-badge">⇄ mix</span>' : ''}
+    </div>`).join('');
+
+  document.getElementById('csv-preview-wrap').style.display = 'block';
+  document.getElementById('csv-import-btn').style.display = 'block';
+  const zone = document.getElementById('csv-drop-zone');
+  zone.classList.add('loaded');
+  zone.innerHTML = `<div>✓ ${csvParsedTracks.length} tracks loaded — review below</div>`;
+}
+
+function importPlaylist() {
+  if (!csvParsedTracks.length) return;
+  const replace = document.getElementById('csv-replace').checked;
+  if (replace) state.songHistory = [];
+
+  let added = 0, skipped = 0;
+  csvParsedTracks.forEach(t => {
+    if (!t.title) { skipped++; return; }
+    const dup = state.songHistory.find(s =>
+      s.title.toLowerCase() === t.title.toLowerCase() &&
+      s.artist.toLowerCase() === t.artist.toLowerCase()
+    );
+    if (dup) { skipped++; return; }
+    state.songHistory.push({ id: uid(), title: t.title, artist: t.artist, duration: t.duration || 0 });
+    added++;
+  });
+
+  save();
+  renderSongHistory();
+  closePlaylistModal();
+  const msg = skipped
+    ? `${added} songs imported (${skipped} skipped — duplicates)`
+    : `${added} songs imported into library`;
+  toast(msg);
 }
 
 // ── KEYBOARD & MODAL CLOSE ─────────────────────────────────────────
