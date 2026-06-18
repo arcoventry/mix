@@ -1518,15 +1518,36 @@ function renderTimeline() {
     const disp = Math.max(1, item.duration - outSaved - inSaved);
     const pct = (disp / effective) * 100;
 
-    let bgColor = '#2e3348';
-    if (item.postures.length > 0) {
-      const p = getPosture(item.postures[0].postureId);
-      if (p) bgColor = p.color + 'cc';
-    }
+    // Build posture/variation sub-segments proportional to effective song duration
+    const postureTotal = seqItemPostureTotal(item);
+    let subHTML = '';
+    item.postures.forEach(entry => {
+      const p = getPosture(entry.postureId);
+      if (!p || !p.duration) return;
+      const pFlex = (p.duration / disp).toFixed(4);
+      if (p.variations?.length) {
+        const varSum = p.variations.reduce((s, v) => s + (v.duration || 0), 0);
+        let inner = '';
+        p.variations.forEach((v, vi) => {
+          if (!v.duration) return;
+          inner += `<div style="flex:${(v.duration/p.duration).toFixed(4)};background:${varColor(p.color,vi)}"></div>`;
+        });
+        const free = p.duration - varSum;
+        if (free > 0) inner += `<div style="flex:${(free/p.duration).toFixed(4)};background:${p.color}55"></div>`;
+        subHTML += `<div style="flex:${pFlex};display:flex;height:100%;min-width:0;overflow:hidden">${inner}</div>`;
+      } else {
+        subHTML += `<div style="flex:${pFlex};background:${p.color}cc;height:100%"></div>`;
+      }
+    });
+    const freeSong = Math.max(0, disp - Math.min(postureTotal, disp));
+    if (freeSong > 0)
+      subHTML += `<div style="flex:${(freeSong/disp).toFixed(4)};background:#2e3348;height:100%"></div>`;
+    if (!subHTML) subHTML = `<div style="flex:1;background:#2e3348;height:100%"></div>`;
 
     const lbl = item.title.length > 12 ? item.title.slice(0,11)+'…' : item.title;
-    segs += `<div class="timeline-seg" style="flex:${pct.toFixed(3)};background:${bgColor}" title="${esc(item.title)} — ${fmtTime(disp)}">
-      <span>${pct>5?lbl:''}</span>
+    segs += `<div class="timeline-seg" style="flex:${pct.toFixed(3)}" title="${esc(item.title)} — ${fmtTime(disp)}">
+      <div style="position:absolute;inset:0;display:flex;overflow:hidden">${subHTML}</div>
+      ${pct > 5 ? `<span style="position:relative;z-index:1">${lbl}</span>` : ''}
       ${thisMix ? `<div class="timeline-mix-overlay" style="width:${Math.min(50,(outSaved/Math.max(1,item.duration))*100).toFixed(1)}%"></div>` : ''}
     </div>`;
     labelData.push({ pct: (acc/effective)*100, time: acc });
