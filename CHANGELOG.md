@@ -4,6 +4,36 @@ All notable changes to the Song ↔ Exercise Sequence Planner are documented her
 
 ---
 
+## [1.2.0] — 2026-06-18
+
+### Overview
+Adds CSV playlist import from Exportify and removes all seed data so new users start with a clean slate.
+
+---
+
+### New Features
+
+#### CSV Playlist Import ("Add Playlist")
+- A new **+ Add Playlist** button sits alongside **+ Add Song** in the Songs panel
+- Opens a modal where you can drag-and-drop or click to select an Exportify `.csv` file
+- Parses Exportify columns automatically: Track Name, Artist Name(s), Duration (ms), Tempo, Energy
+- Shows a preview list of all tracks before committing — each row displays title, artist, duration, and a `⇄ mix` badge for any song detected as a continuous/DJ mix
+- Mix detection: flags tracks containing "mixed" or "continuous mix" in the title, but correctly excludes tracks that are just remixes (contains "remix")
+- Summary line reports track count, how many were detected as mixed, and whether BPM/Energy data is present in the CSV
+- **Replace library** checkbox (checked by default) clears existing songs before import; uncheck to append
+- Duplicate detection: songs already in the library (same title + artist) are skipped, not doubled
+
+---
+
+### Changes
+
+#### Clean First-Run Slate
+- Removed all seven default seed songs from the song library
+- Removed all seven default seed postures (Warm-Up, Seated Climb, Standing Climb, etc.)
+- New users now open the app to an empty library and build from scratch
+
+---
+
 ## [1.1.0] — 2026-06-18
 
 ### Overview
