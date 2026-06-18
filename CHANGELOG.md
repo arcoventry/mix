@@ -4,6 +4,23 @@ All notable changes to the Song ↔ Exercise Sequence Planner are documented her
 
 ---
 
+## [2.0.1] — 2026-06-18
+
+### Overview
+Bug-fix release. Fixes posture scrambling when songs are reordered. The cross-song flow model introduced in v2.0 now recalculates cleanly every time the playlist order changes.
+
+---
+
+### Fixes
+
+#### Postures Scrambled When Reordering Songs
+- Reordering songs could chaotically concentrate postures into the wrong songs, with the result differing each time the same reorder was repeated
+- Root cause: `redistributePostures()` used a `Math.max(si, fromSong)` guard intended to keep a posture from being pulled into an earlier song. But it **permanently mutated** each song's `postures` array on every render. After a reorder, postures were stranded in the old songs' arrays while the guard evaluated them against the *new* song positions — so each pass scrambled the layout further
+- Fixed with a **flow & repack** model: all postures across all songs are flattened into a single ordered routine, then re-flowed into song buckets purely by effective time windows. Posture **order** is now the single source of truth; which song a posture starts in is always *derived* from that order against the current song layout, never stored as ground truth between renders
+- Result: reordering songs re-flows the whole routine cleanly from the start, every time. The operation is idempotent (running it twice never produces a second change) and conserves every posture (none lost or duplicated) — both verified across 20,000 randomized fuzz scenarios
+
+---
+
 ## [2.0.0] — 2026-06-18
 
 ### Overview
