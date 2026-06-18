@@ -1515,11 +1515,19 @@ function updateStats() {
 // ── CARRY-OVER ─────────────────────────────────────────────────────
 function computeCarryOver() {
   let carry = 0, carryPosture = null;
-  return state.sequence.map(item => {
+  return state.sequence.map((item, idx) => {
+    const isLast = idx === state.sequence.length - 1;
+    const prevItem = idx > 0 ? state.sequence[idx - 1] : null;
+    const thisMix = item.mix?.enabled && !isLast;
+    const prevMix = prevItem?.mix?.enabled ?? false;
+    const outSaved = thisMix ? Math.max(0, item.duration - (item.mix.outMixedLength ?? item.duration)) : 0;
+    const inSaved  = prevMix ? Math.max(0, item.duration - (prevItem.mix.inMixedLength ?? item.duration)) : 0;
+    const effDur = Math.max(1, item.duration - outSaved - inSaved);
+
     const incoming = carry;
     const incomingPosture = carryPosture;
     const thisTotal = seqItemPostureTotal(item);
-    const outgoing = Math.max(0, incoming + thisTotal - item.duration);
+    const outgoing = Math.max(0, incoming + thisTotal - effDur);
     if (outgoing > 0 && item.postures.length > 0) {
       carryPosture = getPosture(item.postures[item.postures.length - 1].postureId) || carryPosture;
     } else if (outgoing === 0) {
