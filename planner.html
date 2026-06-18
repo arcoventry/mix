@@ -266,12 +266,23 @@
   .var-legend-dur { font-size: 11px; color: var(--text2); }
   .var-legend-free { font-size: 11px; color: var(--text3); font-style: italic; }
 
-  /* ── OVERFLOW / CARRY-OVER ── */
-  .carry-in-banner {
-    background: #f5a62318; border-left: 3px solid var(--mix-color);
-    padding: 5px 12px; font-size: 11px; color: var(--mix-color);
-    display: flex; align-items: center; gap: 6px;
+  /* ── SONG TIME BAR ── */
+  .song-time-bar {
+    height: 28px; margin: 6px 12px 10px; border-radius: 6px;
+    position: relative; overflow: hidden; background: var(--bg); flex-shrink: 0;
   }
+  .stb-seg { position: absolute; top: 0; height: 100%; }
+  .stb-seg.carry-in { opacity: 0.62; }
+  .stb-seg.carry-in::after {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(0,0,0,0.3) 3px, rgba(0,0,0,0.3) 5px);
+  }
+  .stb-overflow-edge {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 3px;
+    background: rgba(255,255,255,0.35); border-radius: 0 5px 5px 0;
+  }
+
+  /* ── OVERFLOW / CARRY-OVER ── */
   .flow-warning {
     margin: 0 12px 8px; background: #f5a62310; border: 1px solid #f5a62355;
     border-radius: 6px; padding: 6px 10px; display: flex; align-items: center;
@@ -1255,6 +1266,7 @@ function renderSequence() {
   empty.style.display = 'none';
 
   const carryData = computeCarryOver();
+  const { songPos, postureEvents } = computePostureEvents();
 
   state.sequence.forEach((item, idx) => {
     const isLast = idx === state.sequence.length - 1;
@@ -1334,21 +1346,15 @@ function renderSequence() {
           ` : ''}
         ` : ''}
       </div>
-      ${incoming > 0 ? `
-        <div class="carry-in-banner">
-          ← ${fmtTime(incoming)} of ${incomingPosture ? esc(incomingPosture.name) : 'previous posture'} carries in from the last song
-        </div>
-      ` : ''}
+      ${(() => { const sp = songPos[idx]; return (item.postures.length > 0 || incoming > 0) ? buildSongTimeBar(sp.start, sp.end, sp.effDur, postureEvents) : ''; })()}
       <div class="song-postures-area" id="pa-${item.id}">
-        ${item.postures.length === 0 && incoming === 0
-          ? `<div class="posture-drop-zone" id="pdz-${item.id}">Drop postures here</div>`
-          : item.postures.length === 0 && incoming > 0
-            ? `<div class="posture-drop-zone" id="pdz-${item.id}" style="margin-top:6px">Drop additional postures here</div>`
-            : buildPostureRows(item)
+        ${item.postures.length === 0
+          ? `<div class="posture-drop-zone" id="pdz-${item.id}"${incoming > 0 ? ' style="margin-top:0"' : ''}>Drop postures here</div>`
+          : buildPostureRows(item)
         }
       </div>
       ${outgoing > 0 && !isLast ? `
-        <div class="flow-warning">→ ${fmtTime(outgoing)} flows into the next song</div>
+        <div class="flow-warning">→ ${fmtTime(outgoing)} continues into the next song</div>
       ` : ''}
       ${hasUnabsorbedOverflow ? `
         <div class="overflow-warning">
@@ -1569,6 +1575,72 @@ function computeCarryOver() {
   });
 }
 
+// ── POSTURE EVENT COMPUTATION (shared by cards + timeline) ─────────
+function computePostureEvents() {
+  let songCursor = 0;
+  const songPos = state.sequence.map((item, idx) => {
+    const isLast = idx === state.sequence.length - 1;
+    const prevItem = idx > 0 ? state.sequence[idx - 1] : null;
+    const thisMix = item.mix?.enabled && !isLast;
+    const prevMix = prevItem?.mix?.enabled ?? false;
+    const outSaved = thisMix ? Math.max(0, item.duration - (item.mix.outMixedLength ?? item.duration)) : 0;
+    const inSaved  = prevMix ? Math.max(0, item.duration - (prevItem.mix.inMixedLength ?? item.duration)) : 0;
+    const effDur = Math.max(1, item.duration - outSaved - inSaved);
+    const start = songCursor;
+    songCursor += effDur;
+    return { item, start, end: songCursor, effDur, thisMix, outSaved };
+  });
+  let globalCursor = 0;
+  const postureEvents = [];
+  songPos.forEach(({ item, start }) => {
+    let posCursor = Math.max(start, globalCursor);
+    item.postures.forEach(entry => {
+      const p = getPosture(entry.postureId);
+      if (!p || !p.duration) return;
+      postureEvents.push({ startSec: posCursor, dur: p.duration, p, songId: item.id });
+      posCursor += p.duration;
+    });
+    globalCursor = posCursor;
+  });
+  return { songPos, postureEvents };
+}
+
+function buildSongTimeBar(songStart, songEnd, effDur, postureEvents) {
+  if (effDur <= 0) return '';
+  const segs = [];
+  postureEvents.forEach(evt => {
+    const evtEnd = evt.startSec + evt.dur;
+    const clipStart = Math.max(evt.startSec, songStart);
+    const clipEnd = Math.min(evtEnd, songEnd);
+    if (clipEnd <= clipStart) return;
+    const isCarryIn = evt.startSec < songStart;
+    const isOverflow = evtEnd > songEnd;
+    const clipDur = clipEnd - clipStart;
+    const offsetIntoPosture = clipStart - evt.startSec;
+    let varInner = '';
+    if (evt.p.variations?.length && evt.p.duration > 0) {
+      let varCursor = 0;
+      evt.p.variations.forEach((v, vi) => {
+        if (!v.duration) return;
+        const vStart = varCursor; const vEnd = varCursor + v.duration; varCursor += v.duration;
+        const clipVStart = Math.max(vStart, offsetIntoPosture);
+        const clipVEnd = Math.min(vEnd, offsetIntoPosture + clipDur);
+        if (clipVEnd <= clipVStart) return;
+        const vL = ((clipVStart - offsetIntoPosture) / clipDur * 100).toFixed(2);
+        const vW = ((clipVEnd - clipVStart) / clipDur * 100).toFixed(2);
+        varInner += `<div style="position:absolute;top:0;left:${vL}%;width:${vW}%;height:100%;background:${varColor(evt.p.color, vi)}"></div>`;
+      });
+    }
+    const bg = varInner ? evt.p.color + '44' : evt.p.color + 'dd';
+    const left = ((clipStart - songStart) / effDur * 100).toFixed(2);
+    const width = (clipDur / effDur * 100).toFixed(2);
+    const cls = 'stb-seg' + (isCarryIn ? ' carry-in' : '') + (isOverflow ? ' overflow' : '');
+    const tip = `${evt.p.name}: ${fmtTime(clipDur)}${isCarryIn ? ' (carries in)' : ''}${isOverflow ? ' (continues →)' : ''}`;
+    segs.push(`<div class="${cls}" style="left:${left}%;width:${width}%;background:${bg}" title="${esc(tip)}">${varInner}${isOverflow ? '<div class="stb-overflow-edge"></div>' : ''}</div>`);
+  });
+  return segs.length ? `<div class="song-time-bar">${segs.join('')}</div>` : '';
+}
+
 // ── TIMELINE ───────────────────────────────────────────────────────
 function renderTimeline() {
   const track = document.getElementById('timeline-track');
@@ -1586,35 +1658,8 @@ function renderTimeline() {
     labels.innerHTML = ''; legend.innerHTML = ''; return;
   }
 
-  // ── Song positions in effective class time ──────────────────────
-  let songCursor = 0;
-  const songPos = state.sequence.map((item, idx) => {
-    const isLast = idx === state.sequence.length - 1;
-    const prevItem = idx > 0 ? state.sequence[idx - 1] : null;
-    const thisMix = item.mix?.enabled && !isLast;
-    const prevMix = prevItem?.mix?.enabled ?? false;
-    const outSaved = thisMix ? Math.max(0, item.duration - (item.mix.outMixedLength ?? item.duration)) : 0;
-    const inSaved  = prevMix ? Math.max(0, item.duration - (prevItem.mix.inMixedLength ?? item.duration)) : 0;
-    const effDur = Math.max(1, item.duration - outSaved - inSaved);
-    const start = songCursor;
-    songCursor += effDur;
-    return { item, start, effDur, thisMix, outSaved };
-  });
-
-  // ── Posture events in global class time ─────────────────────────
-  // Postures play back-to-back; overflow crosses song boundaries naturally
-  let globalCursor = 0;
-  const postureEvents = [];
-  songPos.forEach(({ item, start, effDur }) => {
-    let posCursor = Math.max(start, globalCursor);
-    item.postures.forEach(entry => {
-      const p = getPosture(entry.postureId);
-      if (!p || !p.duration) return;
-      postureEvents.push({ startSec: posCursor, dur: p.duration, p });
-      posCursor += p.duration;
-    });
-    globalCursor = posCursor;
-  });
+  // ── Song positions + posture events (shared computation) ────────
+  const { songPos, postureEvents } = computePostureEvents();
 
   // ── Layer 1: song background segments ───────────────────────────
   const songLayerHTML = songPos.map(({ item, effDur, thisMix, outSaved }, i) => {
