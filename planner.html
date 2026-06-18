@@ -1276,6 +1276,10 @@ function renderSequence() {
   }
   empty.style.display = 'none';
 
+  // Auto-reorder: bump postures out of full songs into the song where they
+  // actually start. Persists if anything moved so the data matches the visual.
+  if (redistributePostures()) save();
+
   const carryData = computeCarryOver();
   const { songPos, postureEvents } = computePostureEvents();
 
@@ -1592,6 +1596,52 @@ function computeCarryOver() {
   });
 }
 
+// ── AUTO-REORDER ───────────────────────────────────────────────────
+// Reassign each posture to the song whose effective time-window its start
+// falls in. A posture keeps its home song as long as it STARTS there (even if
+// it overflows the boundary), but a posture dropped into an already-full song
+// is bumped down to the next song that has room. Returns true if anything moved.
+function redistributePostures() {
+  if (!state.sequence.length) return false;
+
+  // Effective song windows — independent of posture assignment
+  let cursor0 = 0;
+  const windows = state.sequence.map((item, idx) => {
+    const isLast = idx === state.sequence.length - 1;
+    const prevItem = idx > 0 ? state.sequence[idx - 1] : null;
+    const thisMix = item.mix?.enabled && !isLast;
+    const prevMix = prevItem?.mix?.enabled ?? false;
+    const outSaved = thisMix ? Math.max(0, item.duration - (item.mix.outMixedLength ?? item.duration)) : 0;
+    const inSaved  = prevMix ? Math.max(0, item.duration - (prevItem.mix.inMixedLength ?? item.duration)) : 0;
+    const effDur = Math.max(1, item.duration - outSaved - inSaved);
+    const start = cursor0; cursor0 += effDur;
+    return { start, end: cursor0 };
+  });
+
+  // Walk postures in class order, greedily assigning to the song they start in.
+  // One-directional: a posture is only ever bumped DOWN into a later song when
+  // it would start past its current song's end. It's never pulled up into an
+  // earlier song, so an intentional drop into a later song is respected.
+  const buckets = state.sequence.map(() => []);
+  let cursor = 0, si = 0, changed = false;
+  state.sequence.forEach((item, fromSong) => {
+    item.postures.forEach(entry => {
+      const p = getPosture(entry.postureId);
+      const dur = p?.duration || 0;
+      while (si < windows.length - 1 && cursor >= windows[si].end) si++;
+      const target = Math.max(si, fromSong); // never pull a posture earlier than its home
+      cursor = Math.max(cursor, windows[target].start);
+      buckets[target].push(entry);
+      if (target !== fromSong) changed = true;
+      cursor += dur;
+      si = target;
+    });
+  });
+
+  if (changed) state.sequence.forEach((item, si) => { item.postures = buckets[si]; });
+  return changed;
+}
+
 // ── POSTURE EVENT COMPUTATION (shared by cards + timeline) ─────────
 function computePostureEvents() {
   let songCursor = 0;
@@ -1884,14 +1934,20 @@ function dropPostureOnSong(seqId, postureId) {
   const posture = getPosture(postureId);
   if (!item || !posture) return;
 
-  item.postures.push({ id: uid(), postureId, notes: '' });
-  save(); renderSequence();
+  const newEntryId = uid();
+  item.postures.push({ id: newEntryId, postureId, notes: '' });
+  save(); renderSequence(); // renderSequence auto-redistributes
 
+  // Find where the posture actually landed after redistribution
+  const droppedIdx = state.sequence.findIndex(s => s.id === seqId);
+  const landedIdx = state.sequence.findIndex(s => s.postures.some(e => e.id === newEntryId));
   const carry = computeCarryOver();
-  const idx = state.sequence.findIndex(s => s.id === seqId);
-  const { outgoing } = carry[idx];
-  const isLast = idx === state.sequence.length - 1;
-  if (outgoing > 0 && isLast) {
+  const isLast = landedIdx === state.sequence.length - 1;
+  const { outgoing } = carry[landedIdx] || {};
+
+  if (landedIdx !== -1 && landedIdx !== droppedIdx) {
+    toast(`🔁 ${posture.name} bumped to "${state.sequence[landedIdx].title}" — song ${droppedIdx + 1} was full`);
+  } else if (outgoing > 0 && isLast) {
     toast(`⚠️ ${posture.name} added — ${fmtTime(outgoing)} exceeds available songs. Add another song.`);
   } else if (outgoing > 0) {
     toast(`${posture.name} added — ${fmtTime(outgoing)} flows into the next song`);
