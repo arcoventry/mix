@@ -6,18 +6,18 @@
 <title>Song ↔ Exercise Sequence Planner</title>
 <style>
   :root {
-    --bg: #0f1117;
-    --bg2: #1a1d26;
-    --bg3: #22263a;
-    --border: #2e3348;
-    --accent: #4f8ef7;
-    --text: #e4e6f0;
-    --text2: #8a8fa8;
-    --text3: #5a5f78;
-    --success: #3dba7a;
-    --warn: #f5a623;
-    --danger: #e05252;
-    --mix-color: #f5a623;
+    --bg: #14110f;
+    --bg2: #1f1b17;
+    --bg3: #2b2620;
+    --border: #3a342b;
+    --accent: #cf8a5c;
+    --text: #ece6dd;
+    --text2: #a89c8c;
+    --text3: #6f6657;
+    --success: #7f9e6b;
+    --warn: #d9a55a;
+    --danger: #c4674f;
+    --mix-color: #d9a55a;
     --radius: 8px;
     --panel-w: 290px;
   }
@@ -47,7 +47,7 @@
   #topbar h1 span { color: var(--accent); }
   .version-badge {
     font-size: 10px; font-weight: 700; letter-spacing: .4px;
-    color: var(--accent); background: #4f8ef71f; border: 1px solid #4f8ef740;
+    color: var(--accent); background: #cf8a5c1f; border: 1px solid #cf8a5c40;
     border-radius: 10px; padding: 2px 7px; white-space: nowrap; align-self: center;
   }
   .class-tabs { display: flex; gap: 6px; }
@@ -137,8 +137,8 @@
     display: flex; flex-direction: column; transition: border-color .15s, box-shadow .15s;
     position: relative; z-index: 1;
   }
-  .song-card.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px #4f8ef740; }
-  .song-card.posture-drag-over { border-color: var(--success); box-shadow: 0 0 0 2px #3dba7a40; }
+  .song-card.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px #cf8a5c40; }
+  .song-card.posture-drag-over { border-color: var(--success); box-shadow: 0 0 0 2px #7f9e6b40; }
   .song-card.overflow { border-color: var(--danger); }
 
   .song-header {
@@ -171,15 +171,15 @@
     transition: all .15s; user-select: none;
   }
   .mix-toggle::before { content: '⇄'; font-size: 14px; }
-  .mix-toggle:hover { border-color: var(--mix-color); color: var(--mix-color); background: #f5a62310; }
+  .mix-toggle:hover { border-color: var(--mix-color); color: var(--mix-color); background: #d9a55a10; }
   .mix-toggle.active {
-    background: #f5a62325; border-color: var(--mix-color); color: var(--mix-color);
-    box-shadow: 0 0 0 1px #f5a62340;
+    background: #d9a55a25; border-color: var(--mix-color); color: var(--mix-color);
+    box-shadow: 0 0 0 1px #d9a55a40;
   }
   .mix-toggle.incoming {
-    background: #f5a62318; border-color: var(--mix-color); color: var(--mix-color); cursor: pointer;
+    background: #d9a55a18; border-color: var(--mix-color); color: var(--mix-color); cursor: pointer;
   }
-  .mix-toggle.incoming:hover { background: #f5a62335; }
+  .mix-toggle.incoming:hover { background: #d9a55a35; }
   .mix-length-row {
     display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2);
     padding: 2px 0; flex-wrap: wrap;
@@ -189,7 +189,7 @@
     width: 72px; background: var(--bg); border: 1px solid var(--mix-color); border-radius: 6px;
     color: var(--text); font-size: 12px; padding: 3px 7px; text-align: center;
   }
-  .mix-length-input:focus { outline: none; box-shadow: 0 0 0 2px #f5a62340; }
+  .mix-length-input:focus { outline: none; box-shadow: 0 0 0 2px #d9a55a40; }
   .mix-savings { color: var(--warn); font-weight: 700; white-space: nowrap; }
 
   /* ── PLAYLIST CSV IMPORT ── */
@@ -199,7 +199,7 @@
     color: var(--text3); font-size: 13px; transition: border-color .15s, background .15s;
   }
   .csv-drop-zone:hover, .csv-drop-zone.drag-active {
-    border-color: var(--accent); background: #4f8ef710; color: var(--text2);
+    border-color: var(--accent); background: #cf8a5c10; color: var(--text2);
   }
   .csv-drop-zone.loaded { border-color: var(--success); color: var(--success); }
   .csv-preview { max-height: 220px; overflow-y: auto; margin-top: 4px; }
@@ -213,7 +213,7 @@
   .csv-track-artist { color: var(--text2); font-size: 11px; }
   .csv-track-dur { color: var(--text3); white-space: nowrap; flex-shrink: 0; font-size: 11px; }
   .csv-mix-badge {
-    background: #f5a62318; border: 1px solid var(--mix-color); border-radius: 10px;
+    background: #d9a55a18; border: 1px solid var(--mix-color); border-radius: 10px;
     color: var(--mix-color); font-size: 10px; font-weight: 700; padding: 1px 7px;
     white-space: nowrap; flex-shrink: 0;
   }
@@ -228,7 +228,7 @@
     font-size: 11px; color: var(--text3); text-align: center;
     transition: border-color .15s, background .15s;
   }
-  .posture-drop-zone.hover { border-color: var(--success); background: #3dba7a10; color: var(--success); }
+  .posture-drop-zone.hover { border-color: var(--success); background: #7f9e6b10; color: var(--success); }
 
   /* ── POSTURE ROW ON SONG ── */
   .posture-row {
@@ -300,13 +300,13 @@
 
   /* ── OVERFLOW / CARRY-OVER ── */
   .flow-warning {
-    margin: 0 12px 8px; background: #f5a62310; border: 1px solid #f5a62355;
+    margin: 0 12px 8px; background: #d9a55a10; border: 1px solid #d9a55a55;
     border-radius: 6px; padding: 6px 10px; display: flex; align-items: center;
     gap: 6px; font-size: 11px; color: var(--mix-color);
   }
   .overflow-warning {
     margin: 0 12px 10px;
-    background: #e0525218; border: 1px solid #e0525260; border-radius: 6px;
+    background: #c4674f18; border: 1px solid #c4674f60; border-radius: 6px;
     padding: 8px 12px; display: flex; align-items: center; gap: 10px;
     font-size: 12px;
   }
@@ -318,7 +318,7 @@
   .mix-connector { display: none; position: relative; margin: 0 12px; z-index: 2; }
   .mix-connector.visible { display: block; }
   .mix-connector-inner {
-    background: linear-gradient(135deg, #f5a62333, #f5a62355);
+    background: linear-gradient(135deg, #d9a55a33, #d9a55a55);
     border-left: 2px solid var(--mix-color); border-right: 2px solid var(--mix-color);
     border-radius: 0 0 8px 8px; padding: 4px 12px;
     display: flex; align-items: center; justify-content: space-between;
@@ -716,9 +716,9 @@
 <script>
 // ── CONSTANTS ──────────────────────────────────────────────────────
 const COLORS = [
-  '#4f8ef7','#3dba7a','#e05252','#f5a623','#9c59d1',
-  '#26c6da','#ff7043','#66bb6a','#ab47bc','#ef5350',
-  '#29b6f6','#ffca28','#8d6e63','#78909c','#ec407a'
+  '#8aa07d','#c98a63','#7e96b8','#9b7a9e','#d4a85f',
+  '#5f9e96','#c0808a','#9a9457','#7b8a99','#b96a4d',
+  '#a98bb0','#6f9270','#cbb27e','#6d83a8','#b25e52'
 ];
 
 // Lighten a hex color by mixing with white (factor 0=original, 1=white)
