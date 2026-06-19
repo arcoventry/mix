@@ -43,14 +43,14 @@
     gap: 20px;
     flex-shrink: 0;
   }
-  #topbar h1 { font-size: 16px; font-weight: 700; color: var(--text); white-space: nowrap; }
+  #topbar h1 { font-size: 16px; font-weight: 700; color: var(--text); white-space: nowrap; flex-shrink: 0; }
   #topbar h1 span { color: var(--accent); }
   .version-badge {
     font-size: 10px; font-weight: 700; letter-spacing: .4px;
     color: var(--accent); background: #7e95c41f; border: 1px solid #7e95c440;
     border-radius: 10px; padding: 2px 7px; white-space: nowrap; align-self: center;
   }
-  .class-tabs { display: flex; gap: 6px; }
+  .class-tabs { display: flex; gap: 6px; min-width: 0; overflow-x: auto; flex-shrink: 1; }
   .class-tab {
     padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
     border: 1px solid var(--border); cursor: pointer; color: var(--text2);
@@ -58,7 +58,7 @@
   }
   .class-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .class-tab:hover:not(.active) { border-color: var(--accent); color: var(--text); }
-  .topbar-stats { display: flex; gap: 24px; margin-left: auto; align-items: center; }
+  .topbar-stats { display: flex; gap: 24px; margin-left: auto; align-items: center; flex-shrink: 0; }
   .stat { display: flex; flex-direction: column; align-items: flex-end; }
   .stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .8px; }
   .stat-value { font-size: 18px; font-weight: 700; color: var(--accent); line-height: 1; }
@@ -523,7 +523,7 @@
   }
 
   /* ── EXPORT BUTTON ── */
-  .export-btn { margin-left: 10px; white-space: nowrap; font-weight: 700; }
+  .export-btn { margin-left: 10px; white-space: nowrap; font-weight: 700; flex-shrink: 0; }
 
   /* ── PRINT / PDF EXPORT ── */
   #print-root { display: none; }
