@@ -36,7 +36,7 @@
   #topbar {
     background: var(--bg2);
     border-bottom: 1px solid var(--border);
-    padding: 0 20px;
+    padding: 0 150px 0 20px;
     height: 56px;
     display: flex;
     align-items: center;
@@ -523,7 +523,11 @@
   }
 
   /* ── EXPORT BUTTON ── */
-  .export-btn { margin-left: 16px; white-space: nowrap; font-weight: 700; flex-shrink: 0; border-left: 1px solid var(--border); padding-left: 16px; }
+  .export-btn {
+    position: fixed; top: 11px; right: 16px; z-index: 50;
+    white-space: nowrap; font-weight: 700;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  }
 
   /* ── PRINT / PDF EXPORT ── */
   #print-root { display: none; }
