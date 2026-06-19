@@ -4,7 +4,26 @@ All notable changes to the Song ↔ Exercise Sequence Planner are documented her
 
 ---
 
-## [2.1.0] — 2026-06-18
+## [2.2.0] — 2026-06-19
+
+### Overview
+Adds **PDF export** of a finished class schedule. Build your plan, click **Export PDF** in the top-right, fill in the instructor/class/date, and generate a clean printable handout straight from the browser — no libraries, no upload, fully offline.
+
+---
+
+### New: PDF Class Schedule Export
+
+- **Export PDF button** in the top-right of the app, fixed to the corner so it's always reachable regardless of how many classes or stats fill the top bar
+- **Export dialog** captures the **Instructor Name**, **Class Name** (prefilled from the active class), and **Class Date**; the instructor name is remembered for next time
+- The generated document leads with a **full class timeline** — song segments, posture bars flowing across song boundaries, crossfade-mixed regions, and a time axis — followed by a **posture color legend**
+- **Per-song breakdown** maps the final posture layout against each song: time range, a per-song bar, and each posture with its proportional variation divisions
+- **Crossfade mixes are called out** where applicable, and postures that carry across a song boundary are noted
+- Renders through the browser's native print path (**Save as PDF**), reusing the same timeline/color engine as the app so the export can never disagree with what's on screen
+- Contains no third-party or corporate branding — just your class
+
+---
+
+
 
 ### Overview
 A full visual refresh. The app moves from a dark navy/blue developer theme to a clean light "Daylight" palette designed as one matched set, and the variation color system was reworked so its divisions stay crisp on any palette. Existing plans load unchanged.
