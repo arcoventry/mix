@@ -521,6 +521,97 @@
   .divider::before, .divider::after {
     content: ''; flex: 1; height: 1px; background: var(--border);
   }
+
+  /* ── EXPORT BUTTON ── */
+  .export-btn { margin-left: 10px; white-space: nowrap; font-weight: 700; }
+
+  /* ── PRINT / PDF EXPORT ── */
+  #print-root { display: none; }
+  @media print {
+    body > * { display: none !important; }
+    #print-root { display: block !important; }
+    @page { size: letter portrait; margin: 13mm; }
+    html, body { background: #fff !important; }
+  }
+  #print-root, #print-root * {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box;
+  }
+  .pdf-page {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, sans-serif;
+    color: #23211c; font-size: 11px; line-height: 1.35;
+  }
+  /* Header */
+  .pdf-header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 2px solid #23211c; padding-bottom: 10px; margin-bottom: 15px;
+  }
+  .pdf-eyebrow {
+    font-size: 9px; font-weight: 700; letter-spacing: 2px; color: #9a948a;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .pdf-class-name { font-size: 25px; font-weight: 800; letter-spacing: -0.5px; margin: 0 0 5px; color: #1a1814; }
+  .pdf-meta { font-size: 11px; color: #6b655c; }
+  .pdf-meta b { color: #23211c; font-weight: 700; }
+  .pdf-stats { display: flex; gap: 17px; flex-shrink: 0; padding-bottom: 1px; }
+  .pdf-stat { text-align: right; }
+  .pdf-stat .num { display: block; font-size: 16px; font-weight: 800; color: #5d79ad; line-height: 1; }
+  .pdf-stat .lbl { display: block; font-size: 8px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: #a8a294; margin-top: 3px; }
+  /* Section titles + blocks */
+  .pdf-section-title { font-size: 10px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; color: #9a948a; margin: 0 0 8px; }
+  .pdf-block { margin-bottom: 18px; }
+  .pdf-timeline-block { break-inside: avoid; }
+  /* Timeline */
+  .pdf-tl-track { position: relative; height: 58px; border-radius: 6px; overflow: hidden; border: 1px solid #ddd7cc; }
+  .pdf-tl-songlayer { position: absolute; inset: 0; display: flex; }
+  .pdf-tl-seg { height: 100%; position: relative; }
+  .pdf-tl-seg.odd  { background: #f1efe9; }
+  .pdf-tl-seg.even { background: #e8e5dd; }
+  .pdf-tl-num { position: absolute; bottom: 3px; left: 5px; font-size: 8px; font-weight: 800; color: rgba(0,0,0,0.32); }
+  .pdf-tl-barlayer { position: absolute; left: 0; right: 0; top: 6px; height: 32px; }
+  .pdf-tl-bar { position: absolute; height: 100%; display: flex; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+  .pdf-tl-bar > span { height: 100%; }
+  .pdf-tl-mix { position: absolute; top: 0; bottom: 20px; background: repeating-linear-gradient(135deg, transparent, transparent 3px, rgba(0,0,0,0.09) 3px, rgba(0,0,0,0.09) 6px); }
+  .pdf-tl-bound { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(0,0,0,0.13); }
+  .pdf-tl-axis { position: relative; height: 12px; margin-top: 3px; }
+  .pdf-tl-axis-lbl { position: absolute; font-size: 8px; color: #a8a294; white-space: nowrap; }
+  /* Legend */
+  .pdf-legend { display: flex; flex-wrap: wrap; gap: 5px 15px; margin-top: 10px; }
+  .pdf-legend-item { display: flex; align-items: center; gap: 5px; font-size: 9px; color: #4a463f; }
+  .pdf-legend-sw { display: flex; height: 9px; border-radius: 2px; overflow: hidden; }
+  .pdf-legend-sw > span { width: 9px; height: 100%; }
+  /* Songs */
+  .pdf-song { break-inside: avoid; border: 1px solid #e2ddd3; border-radius: 7px; padding: 10px 12px; margin-bottom: 9px; background: #fff; }
+  .pdf-song-head { display: flex; align-items: center; gap: 10px; }
+  .pdf-song-idx { width: 21px; height: 21px; border-radius: 50%; background: #5d79ad; color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .pdf-song-titles { flex: 1; min-width: 0; }
+  .pdf-song-title { font-size: 13px; font-weight: 700; color: #1a1814; }
+  .pdf-song-artist { font-size: 9px; color: #8a8275; margin-top: 1px; }
+  .pdf-song-time { text-align: right; flex-shrink: 0; }
+  .pdf-song-time b { display: block; font-size: 11px; font-weight: 700; color: #23211c; }
+  .pdf-song-time span { display: block; font-size: 8px; color: #a8a294; margin-top: 1px; }
+  .pdf-song-bar-wrap { margin: 8px 0 2px; }
+  .pdf-song-bar-wrap .song-time-bar { margin: 0; height: 22px; }
+  .pdf-xfade { font-size: 9px; font-weight: 600; color: #a4641f; background: #f7edda; border: 1px solid #e8d5b0; border-radius: 4px; padding: 3px 8px; margin-top: 7px; display: inline-block; }
+  .pdf-carry { font-size: 9px; color: #8a8275; font-style: italic; margin: 6px 0 0; }
+  .pdf-carry b { font-style: normal; font-weight: 700; color: #4a463f; }
+  .pdf-postures { margin-top: 8px; display: flex; flex-direction: column; gap: 7px; }
+  .pdf-posture-row { display: flex; align-items: center; gap: 7px; }
+  .pdf-sw { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+  .pdf-posture-name { font-size: 11px; font-weight: 600; color: #23211c; flex: 1; }
+  .pdf-flag { font-size: 8px; font-weight: 700; color: #5d79ad; text-transform: uppercase; letter-spacing: .4px; }
+  .pdf-posture-dur { font-size: 10px; font-weight: 700; color: #4a463f; }
+  .pdf-varbar { display: flex; height: 9px; border-radius: 3px; overflow: hidden; margin: 4px 0 0 18px; border: 1px solid rgba(0,0,0,0.05); }
+  .pdf-varbar > span { height: 100%; }
+  .pdf-varbar > span:not(:last-child) { border-right: 1px solid rgba(0,0,0,0.16); }
+  .pdf-varbar .free { background: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px); }
+  .pdf-varlist { display: flex; flex-wrap: wrap; gap: 2px 13px; margin: 4px 0 0 18px; }
+  .pdf-var-item { display: flex; align-items: center; gap: 4px; font-size: 9px; color: #4a463f; }
+  .pdf-var-item b { font-weight: 700; color: #23211c; }
+  .pdf-var-item .dot { width: 7px; height: 7px; border-radius: 2px; }
+  .pdf-var-item .dot.free { background: #cfc9bd; }
+  .pdf-empty { font-size: 9px; color: #b0a89a; font-style: italic; }
+  /* Footer */
+  .pdf-footer { margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2ddd3; font-size: 8px; color: #b0aa9c; text-align: center; }
 </style>
 </head>
 <body>
@@ -544,6 +635,7 @@
       <span class="stat-value" id="stat-eff">0:00</span>
     </div>
   </div>
+  <button class="btn export-btn" onclick="openExportModal()" title="Export class schedule as PDF">⬇ Export PDF</button>
 </div>
 
 <div id="main">
@@ -712,7 +804,36 @@
   </div>
 </div>
 
+<!-- EXPORT PDF MODAL -->
+<div class="modal-overlay" id="export-modal">
+  <div class="modal">
+    <h2>Export Class Schedule</h2>
+    <div class="modal-body">
+      <div class="field">
+        <label>Instructor Name</label>
+        <input id="exm-instructor" type="text" placeholder="e.g. Jess L." onkeydown="if(event.key==='Enter')generatePDF()">
+      </div>
+      <div class="field">
+        <label>Class Name</label>
+        <input id="exm-class" type="text" placeholder="e.g. Signature Strength">
+      </div>
+      <div class="field">
+        <label>Class Date</label>
+        <input id="exm-date" type="date">
+      </div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.4">
+        Opens your browser's print dialog — choose <b>Save as PDF</b> as the destination.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn secondary" onclick="closeExportModal()">Cancel</button>
+      <button class="btn" onclick="generatePDF()">Generate PDF</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
+<div id="print-root"></div>
 
 <script>
 // ── CONSTANTS ──────────────────────────────────────────────────────
@@ -1738,6 +1859,212 @@ function buildSongTimeBar(songStart, songEnd, effDur, postureEvents) {
     segs.push(`<div class="${cls}" style="left:${left}%;width:${width}%;background:${bg}" title="${esc(tip)}">${varInner}${isOverflow ? '<div class="stb-overflow-edge"></div>' : ''}</div>`);
   });
   return segs.length ? `<div class="song-time-bar">${segs.join('')}</div>` : '';
+}
+
+// ── PDF EXPORT ─────────────────────────────────────────────────────
+function openExportModal() {
+  if (!state.sequence.length) { toast('Add songs to the plan before exporting'); return; }
+  const cls = state.classes?.find(c => c.id === state.activeClassId);
+  document.getElementById('exm-class').value = cls ? cls.name : '';
+  document.getElementById('exm-instructor').value = localStorage.getItem('planner_instructor') || '';
+  document.getElementById('exm-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('export-modal').classList.add('open');
+  setTimeout(() => document.getElementById('exm-instructor').focus(), 50);
+}
+function closeExportModal() {
+  document.getElementById('export-modal').classList.remove('open');
+}
+function formatPrintDate(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return `${months[(m||1)-1]} ${d}, ${y}`;
+}
+
+// Proportional class timeline for the PDF (mirrors the on-screen timeline)
+function buildPrintTimeline() {
+  const { effective } = calcEffectiveTime();
+  if (!effective) return '';
+  const { songPos, postureEvents } = computePostureEvents();
+
+  const segs = songPos.map(({ item, effDur, thisMix, outSaved }, i) => {
+    const w = (effDur / effective * 100).toFixed(3);
+    const mix = thisMix
+      ? `<div class="pdf-tl-mix" style="right:0;width:${Math.min(50, (outSaved / Math.max(1, item.duration)) * 100).toFixed(1)}%"></div>`
+      : '';
+    return `<div class="pdf-tl-seg ${i % 2 ? 'even' : 'odd'}" style="width:${w}%">${mix}<span class="pdf-tl-num">${i + 1}</span></div>`;
+  }).join('');
+
+  const bars = postureEvents.map(({ startSec, dur, p }) => {
+    const left = (startSec / effective * 100).toFixed(3);
+    const width = (dur / effective * 100).toFixed(3);
+    let inner = '';
+    if (p.variations?.length) {
+      let sum = 0;
+      p.variations.forEach((v, vi) => {
+        if (!v.duration) return; sum += v.duration;
+        inner += `<span style="flex:${(v.duration / p.duration).toFixed(4)};background:${varColor(p.color, vi)}"></span>`;
+      });
+      const free = p.duration - sum;
+      if (free > 0) inner += `<span style="flex:${(free / p.duration).toFixed(4)};background:${p.color}55"></span>`;
+    } else {
+      inner = `<span style="flex:1;background:${p.color}"></span>`;
+    }
+    return `<div class="pdf-tl-bar" style="left:${left}%;width:calc(${width}% - 1.5px)">${inner}</div>`;
+  }).join('');
+
+  const bounds = songPos.slice(0, -1).map(({ start, effDur }) =>
+    `<div class="pdf-tl-bound" style="left:${((start + effDur) / effective * 100).toFixed(2)}%"></div>`
+  ).join('');
+
+  const labelData = songPos.map(({ start }) => ({ pct: start / effective * 100, t: start }));
+  const lastSP = songPos[songPos.length - 1];
+  labelData.push({ pct: 100, t: lastSP.start + lastSP.effDur });
+  const axis = labelData.map((l, i) => {
+    const tf = i === 0 ? 'none' : (i === labelData.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)');
+    return `<span class="pdf-tl-axis-lbl" style="left:${l.pct.toFixed(1)}%;transform:${tf}">${fmtTime(l.t)}</span>`;
+  }).join('');
+
+  return `<div class="pdf-tl-track">
+      <div class="pdf-tl-songlayer">${segs}</div>
+      <div class="pdf-tl-barlayer">${bars}</div>
+      ${bounds}
+    </div>
+    <div class="pdf-tl-axis">${axis}</div>`;
+}
+
+function buildPrintLegend() {
+  const usedIds = [...new Set(state.sequence.flatMap(s => s.postures.map(e => e.postureId)))];
+  if (!usedIds.length) return '';
+  const items = usedIds.map(pid => {
+    const p = getPosture(pid);
+    if (!p) return '';
+    const sw = p.variations?.length
+      ? p.variations.map((v, vi) => v.duration ? `<span style="background:${varColor(p.color, vi)}"></span>` : '').join('')
+      : `<span style="background:${p.color}"></span>`;
+    return `<span class="pdf-legend-item"><span class="pdf-legend-sw">${sw}</span>${esc(p.name)}</span>`;
+  }).join('');
+  return `<div class="pdf-legend">${items}</div>`;
+}
+
+// Song-by-song breakdown with postures, variations and crossfades
+function buildPrintSongs() {
+  const { songPos, postureEvents } = computePostureEvents();
+  return songPos.map((sp, idx) => {
+    const { item, start, end, effDur, thisMix, outSaved } = sp;
+    const isLast = idx === state.sequence.length - 1;
+
+    const carryIns = postureEvents.filter(e => e.startSec < start - 0.001 && (e.startSec + e.dur) > start + 0.001);
+    const homeEvents = postureEvents.filter(e => e.songId === item.id);
+    const bar = buildSongTimeBar(start, end, effDur, postureEvents);
+
+    let mixNote = '';
+    if (thisMix && !isLast) {
+      const next = state.sequence[idx + 1];
+      const inSaved = Math.max(0, next.duration - (item.mix.inMixedLength ?? next.duration));
+      const saved = outSaved + inSaved;
+      mixNote = `<div class="pdf-xfade">⇄ Crossfade into “${esc(next.title)}” — saves ${fmtTime(saved)} (out ${fmtTime(outSaved)} · in ${fmtTime(inSaved)})</div>`;
+    }
+
+    const carryHTML = carryIns.map(e => {
+      const clip = Math.min(e.startSec + e.dur, end) - start;
+      return `<div class="pdf-carry">↳ continues from previous song: <b>${esc(e.p.name)}</b> (${fmtTime(clip)} here)</div>`;
+    }).join('');
+
+    const postureHTML = homeEvents.map(e => {
+      const p = e.p;
+      const continues = (e.startSec + e.dur) > end + 0.001;
+      let varbar = '', varlist = '';
+      if (p.variations?.length) {
+        let sum = 0;
+        varbar = p.variations.map((v, vi) => {
+          if (!v.duration) return ''; sum += v.duration;
+          return `<span style="flex:${(v.duration / p.duration).toFixed(4)};background:${varColor(p.color, vi)}"></span>`;
+        }).join('');
+        const free = p.duration - sum;
+        if (free > 0.5) varbar += `<span class="free" style="flex:${(free / p.duration).toFixed(4)}"></span>`;
+        varlist = p.variations.filter(v => v.duration > 0).map((v, vi) =>
+          `<span class="pdf-var-item"><span class="dot" style="background:${varColor(p.color, vi)}"></span>${esc(v.name)} <b>${fmtTime(v.duration)}</b></span>`
+        ).join('');
+        if (free > 0.5) varlist += `<span class="pdf-var-item"><span class="dot free"></span>${fmtTime(free)} free</span>`;
+      }
+      return `<div class="pdf-posture">
+          <div class="pdf-posture-row">
+            <span class="pdf-sw" style="background:${p.color}"></span>
+            <span class="pdf-posture-name">${esc(p.name)}</span>
+            ${continues ? '<span class="pdf-flag">continues →</span>' : ''}
+            <span class="pdf-posture-dur">${fmtTime(p.duration)}</span>
+          </div>
+          ${p.variations?.length ? `<div class="pdf-varbar">${varbar}</div><div class="pdf-varlist">${varlist}</div>` : ''}
+        </div>`;
+    }).join('');
+
+    return `<div class="pdf-song">
+        <div class="pdf-song-head">
+          <span class="pdf-song-idx">${idx + 1}</span>
+          <div class="pdf-song-titles">
+            <div class="pdf-song-title">${esc(item.title)}</div>
+            ${item.artist ? `<div class="pdf-song-artist">${esc(item.artist)}</div>` : ''}
+          </div>
+          <div class="pdf-song-time">
+            <b>${fmtTime(start)}–${fmtTime(end)}</b>
+            <span>${fmtTime(item.duration)} track${Math.abs(effDur - item.duration) > 0.5 ? ` · ${fmtTime(effDur)} eff.` : ''}</span>
+          </div>
+        </div>
+        ${bar ? `<div class="pdf-song-bar-wrap">${bar}</div>` : ''}
+        ${carryHTML}
+        <div class="pdf-postures">${postureHTML || '<div class="pdf-empty">No postures assigned to this song</div>'}</div>
+        ${mixNote}
+      </div>`;
+  }).join('');
+}
+
+function generatePDF() {
+  if (!state.sequence.length) { toast('Add songs to the plan before exporting'); return; }
+  const instructor = document.getElementById('exm-instructor').value.trim();
+  const className = document.getElementById('exm-class').value.trim() || 'Untitled Class';
+  const dateStr = formatPrintDate(document.getElementById('exm-date').value);
+  localStorage.setItem('planner_instructor', instructor);
+
+  const { total, effective, mixSaved } = calcEffectiveTime();
+  const metaParts = [];
+  if (instructor) metaParts.push(`Instructor <b>${esc(instructor)}</b>`);
+  if (dateStr) metaParts.push(esc(dateStr));
+
+  const stat = (num, lbl) => `<div class="pdf-stat"><span class="num">${num}</span><span class="lbl">${lbl}</span></div>`;
+  const statsHTML = stat(state.sequence.length, 'Songs') + stat(fmtTime(total), 'Total')
+    + stat(fmtTime(effective), 'Effective') + (mixSaved > 0 ? stat(fmtTime(mixSaved), 'Mix saves') : '');
+
+  const doc = `<div class="pdf-page">
+      <header class="pdf-header">
+        <div class="pdf-title-block">
+          <div class="pdf-eyebrow">Class Choreography</div>
+          <h1 class="pdf-class-name">${esc(className)}</h1>
+          <div class="pdf-meta">${metaParts.join(' &nbsp;·&nbsp; ')}</div>
+        </div>
+        <div class="pdf-stats">${statsHTML}</div>
+      </header>
+      <section class="pdf-block pdf-timeline-block">
+        <div class="pdf-section-title">Class Timeline</div>
+        ${buildPrintTimeline()}
+        ${buildPrintLegend()}
+      </section>
+      <section class="pdf-block">
+        <div class="pdf-section-title">Song &amp; Posture Breakdown</div>
+        ${buildPrintSongs()}
+      </section>
+      <footer class="pdf-footer">Generated ${esc(dateStr || new Date().toLocaleDateString())} · Song ↔ Exercise Planner</footer>
+    </div>`;
+
+  document.getElementById('print-root').innerHTML = doc;
+  const prevTitle = document.title;
+  document.title = `${className}${instructor ? ' — ' + instructor : ''}${dateStr ? ' — ' + dateStr : ''}`;
+  window.addEventListener('afterprint', function restore() {
+    document.title = prevTitle;
+    window.removeEventListener('afterprint', restore);
+  });
+  closeExportModal();
+  setTimeout(() => window.print(), 80);
 }
 
 // ── TIMELINE ───────────────────────────────────────────────────────
